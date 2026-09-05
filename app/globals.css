@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paleta: sinalizacao industrial de armazem - ardosia escura, ambar de alerta, verde de status */
+  --color-ardosia-950: #14181f;
+  --color-ardosia-900: #1b212b;
+  --color-ardosia-800: #262e3b;
+  --color-ardosia-700: #384357;
+  --color-ardosia-600: #4d5c78;
+  --color-ardosia-400: #8b97ac;
+  --color-ardosia-200: #d7dce4;
+  --color-ardosia-100: #eceff3;
+  --color-ardosia-50: #f6f7f9;
+
+  --color-ambar-500: #d98a2b;
+  --color-ambar-600: #b96f1a;
+
+  --color-verde-500: #3f8b5c;
+  --color-vermelho-500: #b8493f;
+
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+body {
+  background: var(--color-ardosia-50);
+  color: var(--color-ardosia-950);
+  font-family: var(--font-body);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
