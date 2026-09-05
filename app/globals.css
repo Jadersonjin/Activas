@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  /* Paleta: sinalizacao industrial de armazem - ardosia escura, ambar de alerta, verde de status */
-  --color-ardosia-950: #14181f;
-  --color-ardosia-900: #1b212b;
-  --color-ardosia-800: #262e3b;
-  --color-ardosia-700: #384357;
-  --color-ardosia-600: #4d5c78;
-  --color-ardosia-400: #8b97ac;
-  --color-ardosia-200: #d7dce4;
-  --color-ardosia-100: #eceff3;
-  --color-ardosia-50: #f6f7f9;
+  /* Identidade visual Brasmeg: azul corporativo + laranja de destaque */
+  --color-ardosia-950: #0a1a33;
+  --color-ardosia-900: #0f2547;
+  --color-ardosia-800: #163564;
+  --color-ardosia-700: #1f477f;
+  --color-ardosia-600: #2c5fa0;
+  --color-ardosia-400: #6f9bcf;
+  --color-ardosia-200: #c3d8ee;
+  --color-ardosia-100: #e2ecf7;
+  --color-ardosia-50: #f5f8fc;
 
-  --color-ambar-500: #d98a2b;
-  --color-ambar-600: #b96f1a;
+  --color-ambar-500: #f2811d;
+  --color-ambar-600: #d96e0f;
 
   --color-verde-500: #3f8b5c;
   --color-vermelho-500: #b8493f;

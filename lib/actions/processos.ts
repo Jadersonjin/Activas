@@ -10,8 +10,11 @@ export async function criarProcesso(formData: FormData) {
   const clienteId = String(formData.get("clienteId") || "");
   const placaVeiculo = String(formData.get("placaVeiculo") || "").trim();
   const motorista = String(formData.get("motorista") || "").trim() || null;
+  const transportadora = String(formData.get("transportadora") || "").trim() || null;
   const tipoOperacao = String(formData.get("tipoOperacao") || "");
   const numeroReferencia = String(formData.get("numeroReferencia") || "").trim() || null;
+  const quantidadeNotasRaw = String(formData.get("quantidadeNotas") || "").trim();
+  const quantidadeNotas = quantidadeNotasRaw ? Number(quantidadeNotasRaw) : 1;
 
   if (!clienteId || !placaVeiculo || !tipoOperacao) return;
 
@@ -20,8 +23,10 @@ export async function criarProcesso(formData: FormData) {
       clienteId,
       placaVeiculo,
       motorista,
+      transportadora,
       tipoOperacao,
       numeroReferencia,
+      quantidadeNotas,
       criadoPorId: session?.userId,
     },
   });
@@ -75,12 +80,15 @@ export async function adicionarServico(processoId: string, formData: FormData) {
 
   // se for pallet próprio do cliente, abate automaticamente do saldo
   if (tipoServico === "PALLET" && palletProprioCliente) {
+    const refNota = processo.numeroReferencia
+      ? `NF ${processo.numeroReferencia}`
+      : `Placa ${processo.placaVeiculo}`;
     await db.movimentoPallet.create({
       data: {
         clienteId: processo.clienteId,
         tipo: "SAIDA_CONSUMO",
         quantidade,
-        referencia: `Processo ${processoId}`,
+        referencia: `${refNota} · Processo ${new Date(processo.data).toLocaleDateString("pt-BR")}`,
       },
     });
   }

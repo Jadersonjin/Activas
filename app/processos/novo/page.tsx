@@ -41,12 +41,20 @@ export default async function NovoProcessoPage() {
             />
           </div>
           <div>
-            <label className="block text-xs text-ardosia-600 mb-1">Motorista (opcional)</label>
+            <label className="block text-xs text-ardosia-600 mb-1">Transportadora (opcional)</label>
             <input
-              name="motorista"
+              name="transportadora"
               className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-xs text-ardosia-600 mb-1">Motorista (opcional)</label>
+          <input
+            name="motorista"
+            className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -70,6 +78,17 @@ export default async function NovoProcessoPage() {
               className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-xs text-ardosia-600 mb-1">Quantidade de notas</label>
+          <input
+            name="quantidadeNotas"
+            type="number"
+            min="1"
+            defaultValue="1"
+            className="w-full max-w-[140px] border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
+          />
         </div>
 
         <p className="text-xs text-ardosia-400">

@@ -1,37 +1,45 @@
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
-import { SearchBar } from "@/components/SearchBar";
+import { FilterBar } from "@/components/FilterBar";
 import { PresencaCargaForm } from "@/components/PresencaCargaForm";
 import { db } from "@/lib/db";
+import { rangeDia } from "@/lib/date-range";
 
 export default async function PresencaCargaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; de?: string; ate?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, de, ate } = await searchParams;
   const session = (await getSession())!;
   const [registros, clientes] = await Promise.all([
     db.presencaCarga.findMany({
-      where: q
-        ? {
-            OR: [
-              { fornecedor: { contains: q, mode: "insensitive" } },
-              { numeroNota: { contains: q, mode: "insensitive" } },
-              { cliente: { nome: { contains: q, mode: "insensitive" } } },
-              { itens: { some: { codigoProduto: { contains: q, mode: "insensitive" } } } },
-              { itens: { some: { descricao: { contains: q, mode: "insensitive" } } } },
-            ],
-          }
-        : undefined,
+      where: {
+        dataChegada: rangeDia(de, ate),
+        ...(q
+          ? {
+              OR: [
+                { fornecedor: { contains: q, mode: "insensitive" } },
+                { numeroNota: { contains: q, mode: "insensitive" } },
+                { cliente: { nome: { contains: q, mode: "insensitive" } } },
+                { itens: { some: { codigoProduto: { contains: q, mode: "insensitive" } } } },
+                { itens: { some: { descricao: { contains: q, mode: "insensitive" } } } },
+              ],
+            }
+          : {}),
+      },
       orderBy: { dataChegada: "desc" },
-      take: 100,
+      take: 200,
       include: { cliente: true, itens: true },
     }),
     db.cliente.findMany({ where: { ativo: true }, orderBy: { nome: "asc" } }),
   ]);
 
-  const exportHref = `/api/presenca-carga/export${q ? `?q=${encodeURIComponent(q)}` : ""}`;
+  const exportParams = new URLSearchParams();
+  if (q) exportParams.set("q", q);
+  if (de) exportParams.set("de", de);
+  if (ate) exportParams.set("ate", ate);
+  const exportHref = `/api/presenca-carga/export${exportParams.toString() ? `?${exportParams.toString()}` : ""}`;
 
   return (
     <AppShell session={session}>
@@ -53,7 +61,7 @@ export default async function PresencaCargaPage({
 
       <section className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
         <div>
-          <SearchBar action="/presenca-carga" defaultValue={q} placeholder="Fornecedor, nota, produto, cliente..." />
+          <FilterBar action="/presenca-carga" q={q} de={de} ate={ate} placeholder="Fornecedor, nota, produto, cliente..." />
           <div className="border border-ardosia-200 rounded-sm bg-white overflow-hidden">
             <table className="w-full text-sm">
               <thead>

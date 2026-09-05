@@ -41,6 +41,8 @@ export default async function ProcessoDetalhePage({ params }: { params: Promise<
           </h1>
           <p className="text-sm text-ardosia-500 mt-1">
             {labelTipoOperacao(processo.tipoOperacao)} {processo.numeroReferencia ? `· Ref. ${processo.numeroReferencia}` : ""}
+            {processo.transportadora ? ` · ${processo.transportadora}` : ""}
+            {processo.quantidadeNotas && processo.quantidadeNotas > 1 ? ` · ${processo.quantidadeNotas} notas` : ""}
           </p>
         </div>
         {processo.status !== "FINALIZADO" && (

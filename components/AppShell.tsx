@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { logout } from "@/lib/actions/auth";
+import { BrasmegLogo } from "@/components/BrasmegLogo";
 import type { SessionPayload } from "@/lib/session";
 
 const NAV = [
@@ -10,6 +11,7 @@ const NAV = [
   { href: "/pallets", label: "Saldo de pallets", cod: "04" },
   { href: "/avarias", label: "Avarias", cod: "05" },
   { href: "/presenca-carga", label: "Presença de carga", cod: "06" },
+  { href: "/relatorios", label: "Relatórios", cod: "07" },
 ];
 
 export function AppShell({
@@ -23,10 +25,8 @@ export function AppShell({
     <div className="flex min-h-screen">
       <aside className="w-64 shrink-0 bg-ardosia-950 text-ardosia-100 flex flex-col">
         <div className="px-6 py-6 border-b border-ardosia-800">
-          <p className="font-display text-lg font-medium tracking-tight text-ardosia-50">
-            Pátio &amp; Armazém
-          </p>
-          <p className="text-xs text-ardosia-400 mt-1">Controle operacional</p>
+          <BrasmegLogo tema="escuro" />
+          <p className="text-xs text-ardosia-400 mt-2">Controle operacional</p>
         </div>
         <nav className="flex-1 py-4">
           {NAV.map((item) => (

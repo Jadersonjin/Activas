@@ -10,7 +10,7 @@ export default async function DashboardPage() {
   const inicioHoje = new Date();
   inicioHoje.setHours(0, 0, 0, 0);
 
-  const [processosHoje, emAndamento, avariasHoje, presencasHoje, porTipoHoje, notasHoje] = await Promise.all([
+  const [processosHoje, emAndamento, avariasHoje, presencasHoje, porTipoHoje, somaNotasHoje] = await Promise.all([
     db.processo.count({ where: { criadoEm: { gte: inicioHoje } } }),
     db.processo.count({ where: { status: "EM_ANDAMENTO" } }),
     db.avaria.count({ where: { data: { gte: inicioHoje } } }),
@@ -20,8 +20,9 @@ export default async function DashboardPage() {
       where: { criadoEm: { gte: inicioHoje } },
       _count: { _all: true },
     }),
-    db.processo.count({
-      where: { criadoEm: { gte: inicioHoje }, numeroReferencia: { not: null } },
+    db.processo.aggregate({
+      where: { criadoEm: { gte: inicioHoje } },
+      _sum: { quantidadeNotas: true },
     }),
   ]);
 
@@ -71,12 +72,12 @@ export default async function DashboardPage() {
           })}
           <div>
             <p className="text-xs text-ardosia-500 mb-1">Notas do dia</p>
-            <p className="font-display text-2xl">{notasHoje}</p>
+            <p className="font-display text-2xl">{somaNotasHoje._sum.quantidadeNotas || 0}</p>
           </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Link
           href="/processos/novo"
           className="border border-ardosia-200 bg-white rounded-sm p-5 hover:border-ambar-500 transition-colors"
@@ -90,6 +91,13 @@ export default async function DashboardPage() {
         >
           <p className="font-display text-sm font-medium mb-1">+ Presença de carga</p>
           <p className="text-xs text-ardosia-500">Formalizar chegada de material</p>
+        </Link>
+        <Link
+          href="/relatorios"
+          className="border border-ardosia-200 bg-white rounded-sm p-5 hover:border-ambar-500 transition-colors"
+        >
+          <p className="font-display text-sm font-medium mb-1">📊 Relatórios</p>
+          <p className="text-xs text-ardosia-500">Resumo diário e mensal</p>
         </Link>
       </section>
     </AppShell>

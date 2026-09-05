@@ -1,32 +1,36 @@
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
-import { SearchBar } from "@/components/SearchBar";
+import { FilterBar } from "@/components/FilterBar";
 import { db } from "@/lib/db";
 import { registrarAvaria } from "@/lib/actions/avarias";
+import { rangeDia } from "@/lib/date-range";
 
 export default async function AvariasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; de?: string; ate?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, de, ate } = await searchParams;
   const session = (await getSession())!;
   const [avarias, clientes] = await Promise.all([
     db.avaria.findMany({
-      where: q
-        ? {
-            OR: [
-              { codigoProduto: { contains: q, mode: "insensitive" } },
-              { descricao: { contains: q, mode: "insensitive" } },
-              { lote: { contains: q, mode: "insensitive" } },
-              { numeroNota: { contains: q, mode: "insensitive" } },
-              { localizacao: { contains: q, mode: "insensitive" } },
-              { cliente: { nome: { contains: q, mode: "insensitive" } } },
-            ],
-          }
-        : undefined,
+      where: {
+        data: rangeDia(de, ate),
+        ...(q
+          ? {
+              OR: [
+                { codigoProduto: { contains: q, mode: "insensitive" } },
+                { descricao: { contains: q, mode: "insensitive" } },
+                { lote: { contains: q, mode: "insensitive" } },
+                { numeroNota: { contains: q, mode: "insensitive" } },
+                { localizacao: { contains: q, mode: "insensitive" } },
+                { cliente: { nome: { contains: q, mode: "insensitive" } } },
+              ],
+            }
+          : {}),
+      },
       orderBy: { data: "desc" },
-      take: 100,
+      take: 200,
       include: { cliente: true },
     }),
     db.cliente.findMany({ where: { ativo: true }, orderBy: { nome: "asc" } }),
@@ -41,7 +45,7 @@ export default async function AvariasPage({
 
       <section className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
         <div>
-          <SearchBar action="/avarias" defaultValue={q} placeholder="Produto, lote, nota, local, cliente..." />
+          <FilterBar action="/avarias" q={q} de={de} ate={ate} placeholder="Produto, lote, nota, local, cliente..." />
           <div className="border border-ardosia-200 rounded-sm bg-white overflow-hidden">
             <table className="w-full text-sm">
               <thead>

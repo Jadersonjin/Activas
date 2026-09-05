@@ -53,8 +53,10 @@ model Processo {
   data              DateTime @default(now())
   placaVeiculo      String
   motorista         String?
-  tipoOperacao      String   // ex: Carga, Descarga, Cross-docking
-  numeroReferencia  String?  // NF, pedido, referência interna
+  transportadora    String?  // nome da transportadora/carreteiro (da base externa)
+  tipoOperacao      String   // ex: Carga, Descarga, Entrega
+  numeroReferencia  String?  // NF, pedido, referência interna — pode conter várias NFs separadas por vírgula
+  quantidadeNotas   Int?     @default(1) // "Qtde NF" — total de notas desse processo
 
   horaChegada       DateTime?
   horaLiberacao     DateTime?

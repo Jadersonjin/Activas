@@ -1,22 +1,28 @@
 import { NextRequest } from "next/server";
 import ExcelJS from "exceljs";
 import { db } from "@/lib/db";
+import { rangeDia } from "@/lib/date-range";
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q") || undefined;
+  const de = req.nextUrl.searchParams.get("de") || undefined;
+  const ate = req.nextUrl.searchParams.get("ate") || undefined;
 
   const registros = await db.presencaCarga.findMany({
-    where: q
-      ? {
-          OR: [
-            { fornecedor: { contains: q, mode: "insensitive" } },
-            { numeroNota: { contains: q, mode: "insensitive" } },
-            { cliente: { nome: { contains: q, mode: "insensitive" } } },
-            { itens: { some: { codigoProduto: { contains: q, mode: "insensitive" } } } },
-            { itens: { some: { descricao: { contains: q, mode: "insensitive" } } } },
-          ],
-        }
-      : undefined,
+    where: {
+      dataChegada: rangeDia(de, ate),
+      ...(q
+        ? {
+            OR: [
+              { fornecedor: { contains: q, mode: "insensitive" } },
+              { numeroNota: { contains: q, mode: "insensitive" } },
+              { cliente: { nome: { contains: q, mode: "insensitive" } } },
+              { itens: { some: { codigoProduto: { contains: q, mode: "insensitive" } } } },
+              { itens: { some: { descricao: { contains: q, mode: "insensitive" } } } },
+            ],
+          }
+        : {}),
+    },
     orderBy: { dataChegada: "desc" },
     include: { cliente: true, itens: true },
   });
