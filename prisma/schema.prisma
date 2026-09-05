@@ -110,9 +110,11 @@ model Avaria {
   codigoProduto  String
   descricao      String
   lote           String?
+  numeroNota     String?
   pesoAvaria     Decimal
   localizacao    String?  // endereço/posição no armazém
   varredura      Boolean  @default(false) // se a avaria foi identificada em varredura
+  quantidadeVarreduraKg Decimal? // preenchido só quando varredura = true
   fotoUrl        String?
   observacao     String?
 
@@ -120,7 +122,7 @@ model Avaria {
   criadoEm       DateTime @default(now())
 }
 
-// Presença de carga — formalização da chegada de material
+// Presença de carga — formalização da chegada de material (uma nota, vários produtos)
 model PresencaCarga {
   id             String   @id @default(cuid())
   cliente        Cliente  @relation(fields: [clienteId], references: [id])
@@ -128,12 +130,23 @@ model PresencaCarga {
 
   fornecedor     String
   numeroNota     String
-  codigoProduto  String
-  descricao      String
-  quantidade     Decimal
-  unidade        String   @default("UN")
   dataChegada    DateTime @default(now())
   observacao     String?
 
   criadoEm       DateTime @default(now())
+
+  itens          PresencaCargaItem[]
+}
+
+model PresencaCargaItem {
+  id              String        @id @default(cuid())
+  presencaCarga   PresencaCarga @relation(fields: [presencaCargaId], references: [id], onDelete: Cascade)
+  presencaCargaId String
+
+  codigoProduto   String
+  descricao       String
+  quantidade      Decimal
+  unidade         String @default("UN")
+
+  criadoEm        DateTime @default(now())
 }

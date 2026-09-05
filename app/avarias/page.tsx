@@ -1,12 +1,34 @@
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
+import { SearchBar } from "@/components/SearchBar";
 import { db } from "@/lib/db";
 import { registrarAvaria } from "@/lib/actions/avarias";
 
-export default async function AvariasPage() {
+export default async function AvariasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const session = (await getSession())!;
   const [avarias, clientes] = await Promise.all([
-    db.avaria.findMany({ orderBy: { data: "desc" }, take: 50, include: { cliente: true } }),
+    db.avaria.findMany({
+      where: q
+        ? {
+            OR: [
+              { codigoProduto: { contains: q, mode: "insensitive" } },
+              { descricao: { contains: q, mode: "insensitive" } },
+              { lote: { contains: q, mode: "insensitive" } },
+              { numeroNota: { contains: q, mode: "insensitive" } },
+              { localizacao: { contains: q, mode: "insensitive" } },
+              { cliente: { nome: { contains: q, mode: "insensitive" } } },
+            ],
+          }
+        : undefined,
+      orderBy: { data: "desc" },
+      take: 100,
+      include: { cliente: true },
+    }),
     db.cliente.findMany({ where: { ativo: true }, orderBy: { nome: "asc" } }),
   ]);
 
@@ -18,43 +40,52 @@ export default async function AvariasPage() {
       </header>
 
       <section className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
-        <div className="border border-ardosia-200 rounded-sm bg-white overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-ardosia-100 text-left text-xs text-ardosia-600 uppercase tracking-wide">
-                <th className="px-4 py-2 font-normal">Data</th>
-                <th className="px-4 py-2 font-normal">Cliente</th>
-                <th className="px-4 py-2 font-normal">Produto</th>
-                <th className="px-4 py-2 font-normal">Lote</th>
-                <th className="px-4 py-2 font-normal">Peso</th>
-                <th className="px-4 py-2 font-normal">Local</th>
-                <th className="px-4 py-2 font-normal">Origem</th>
-              </tr>
-            </thead>
-            <tbody>
-              {avarias.map((a) => (
-                <tr key={a.id} className="border-t border-ardosia-100 align-top">
-                  <td className="px-4 py-2 font-mono text-xs">{new Date(a.data).toLocaleDateString("pt-BR")}</td>
-                  <td className="px-4 py-2">{a.cliente.nome}</td>
-                  <td className="px-4 py-2">
-                    <p className="font-mono text-xs">{a.codigoProduto}</p>
-                    <p className="text-xs text-ardosia-500">{a.descricao}</p>
-                  </td>
-                  <td className="px-4 py-2 font-mono text-xs">{a.lote || "—"}</td>
-                  <td className="px-4 py-2 font-mono">{a.pesoAvaria.toString()} kg</td>
-                  <td className="px-4 py-2 text-xs">{a.localizacao || "—"}</td>
-                  <td className="px-4 py-2 text-xs">{a.varredura ? "Varredura" : "Apontamento direto"}</td>
+        <div>
+          <SearchBar action="/avarias" defaultValue={q} placeholder="Produto, lote, nota, local, cliente..." />
+          <div className="border border-ardosia-200 rounded-sm bg-white overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-ardosia-100 text-left text-xs text-ardosia-600 uppercase tracking-wide">
+                  <th className="px-4 py-2 font-normal">Data</th>
+                  <th className="px-4 py-2 font-normal">Cliente</th>
+                  <th className="px-4 py-2 font-normal">Produto</th>
+                  <th className="px-4 py-2 font-normal">Lote / Nota</th>
+                  <th className="px-4 py-2 font-normal">Peso</th>
+                  <th className="px-4 py-2 font-normal">Local</th>
+                  <th className="px-4 py-2 font-normal">Origem</th>
                 </tr>
-              ))}
-              {avarias.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-ardosia-400 text-sm">
-                    Nenhuma avaria registrada ainda.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {avarias.map((a) => (
+                  <tr key={a.id} className="border-t border-ardosia-100 align-top">
+                    <td className="px-4 py-2 font-mono text-xs">{new Date(a.data).toLocaleDateString("pt-BR")}</td>
+                    <td className="px-4 py-2">{a.cliente.nome}</td>
+                    <td className="px-4 py-2">
+                      <p className="font-mono text-xs">{a.codigoProduto}</p>
+                      <p className="text-xs text-ardosia-500">{a.descricao}</p>
+                    </td>
+                    <td className="px-4 py-2 font-mono text-xs">
+                      {a.lote || "—"} {a.numeroNota ? `· NF ${a.numeroNota}` : ""}
+                    </td>
+                    <td className="px-4 py-2 font-mono">{a.pesoAvaria.toString()} kg</td>
+                    <td className="px-4 py-2 text-xs">{a.localizacao || "—"}</td>
+                    <td className="px-4 py-2 text-xs">
+                      {a.varredura
+                        ? `Varredura${a.quantidadeVarreduraKg ? ` · ${a.quantidadeVarreduraKg.toString()} kg` : ""}`
+                        : "Apontamento direto"}
+                    </td>
+                  </tr>
+                ))}
+                {avarias.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-6 text-center text-ardosia-400 text-sm">
+                      Nenhuma avaria encontrada.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <form action={registrarAvaria} className="border border-ardosia-200 rounded-sm bg-white p-5 h-fit space-y-4">
@@ -101,6 +132,13 @@ export default async function AvariasPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
+              <label className="block text-xs text-ardosia-600 mb-1">Nº da nota</label>
+              <input
+                name="numeroNota"
+                className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
+              />
+            </div>
+            <div>
               <label className="block text-xs text-ardosia-600 mb-1">Peso da avaria (kg)</label>
               <input
                 name="pesoAvaria"
@@ -110,18 +148,37 @@ export default async function AvariasPage() {
                 className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
               />
             </div>
-            <div>
-              <label className="block text-xs text-ardosia-600 mb-1">Localização/endereço</label>
+          </div>
+          <div>
+            <label className="block text-xs text-ardosia-600 mb-1">Localização/endereço</label>
+            <input
+              name="localizacao"
+              className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
+            />
+          </div>
+
+          {/* Truque CSS: o checkbox "peer" e o campo de KG precisam ser irmãos diretos pro seletor funcionar */}
+          <div>
+            <input
+              type="checkbox"
+              id="varredura-check"
+              name="varredura"
+              className="peer accent-ambar-500 align-middle"
+            />
+            <label htmlFor="varredura-check" className="ml-2 text-sm text-ardosia-700 align-middle cursor-pointer">
+              Identificada em varredura
+            </label>
+            <div className="hidden peer-checked:block mt-3">
+              <label className="block text-xs text-ardosia-600 mb-1">Quantidade de varredura (kg)</label>
               <input
-                name="localizacao"
+                name="quantidadeVarreduraKg"
+                type="number"
+                step="0.01"
                 className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
               />
             </div>
           </div>
-          <label className="flex items-center gap-2 text-sm text-ardosia-700">
-            <input type="checkbox" name="varredura" className="accent-ambar-500" />
-            Identificada em varredura
-          </label>
+
           <div>
             <label className="block text-xs text-ardosia-600 mb-1">Observação (opcional)</label>
             <input

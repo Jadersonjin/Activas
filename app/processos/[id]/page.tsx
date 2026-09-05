@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
 import { db } from "@/lib/db";
+import { labelTipoOperacao } from "@/lib/labels";
 import {
   registrarHorario,
   finalizarProcesso,
@@ -39,7 +40,7 @@ export default async function ProcessoDetalhePage({ params }: { params: Promise<
             {processo.cliente.nome} · {processo.placaVeiculo}
           </h1>
           <p className="text-sm text-ardosia-500 mt-1">
-            {processo.tipoOperacao} {processo.numeroReferencia ? `· Ref. ${processo.numeroReferencia}` : ""}
+            {labelTipoOperacao(processo.tipoOperacao)} {processo.numeroReferencia ? `· Ref. ${processo.numeroReferencia}` : ""}
           </p>
         </div>
         {processo.status !== "FINALIZADO" && (

@@ -60,7 +60,7 @@ export default async function NovoProcessoPage() {
               <option value="">Selecione...</option>
               <option value="CARGA">Carga</option>
               <option value="DESCARGA">Descarga</option>
-              <option value="CROSS_DOCKING">Cross-docking</option>
+              <option value="ENTREGA">Entrega</option>
             </select>
           </div>
           <div>

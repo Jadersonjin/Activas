@@ -1,18 +1,36 @@
 import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
+import { SearchBar } from "@/components/SearchBar";
 import { db } from "@/lib/db";
+import { labelTipoOperacao } from "@/lib/labels";
 
 function fmtHora(d: Date | null) {
   if (!d) return "—";
   return new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-export default async function ProcessosPage() {
+export default async function ProcessosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const session = (await getSession())!;
+
   const processos = await db.processo.findMany({
+    where: q
+      ? {
+          OR: [
+            { placaVeiculo: { contains: q, mode: "insensitive" } },
+            { motorista: { contains: q, mode: "insensitive" } },
+            { numeroReferencia: { contains: q, mode: "insensitive" } },
+            { cliente: { nome: { contains: q, mode: "insensitive" } } },
+          ],
+        }
+      : undefined,
     orderBy: { criadoEm: "desc" },
-    take: 50,
+    take: 100,
     include: { cliente: true },
   });
 
@@ -30,6 +48,8 @@ export default async function ProcessosPage() {
           + Novo processo
         </Link>
       </header>
+
+      <SearchBar action="/processos" defaultValue={q} placeholder="Cliente, placa, motorista, nº ref..." />
 
       <div className="border border-ardosia-200 rounded-sm bg-white overflow-hidden">
         <table className="w-full text-sm">
@@ -54,7 +74,7 @@ export default async function ProcessosPage() {
                   </Link>
                 </td>
                 <td className="px-4 py-3 font-mono">{p.placaVeiculo}</td>
-                <td className="px-4 py-3">{p.tipoOperacao}</td>
+                <td className="px-4 py-3">{labelTipoOperacao(p.tipoOperacao)}</td>
                 <td className="px-4 py-3 font-mono">{fmtHora(p.horaChegada)}</td>
                 <td className="px-4 py-3 font-mono">{fmtHora(p.horaLiberacao)}</td>
                 <td className="px-4 py-3 font-mono">{fmtHora(p.horaInicioOp)}</td>
@@ -77,7 +97,7 @@ export default async function ProcessosPage() {
             {processos.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-4 py-6 text-center text-ardosia-400 text-sm">
-                  Nenhum processo registrado ainda.
+                  Nenhum processo encontrado.
                 </td>
               </tr>
             )}

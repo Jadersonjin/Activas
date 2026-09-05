@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
 import { db } from "@/lib/db";
+import { labelTipoOperacao } from "@/lib/labels";
 
 export default async function DashboardPage() {
   const session = (await getSession())!;
@@ -9,11 +10,19 @@ export default async function DashboardPage() {
   const inicioHoje = new Date();
   inicioHoje.setHours(0, 0, 0, 0);
 
-  const [processosHoje, emAndamento, avariasHoje, presencasHoje] = await Promise.all([
+  const [processosHoje, emAndamento, avariasHoje, presencasHoje, porTipoHoje, notasHoje] = await Promise.all([
     db.processo.count({ where: { criadoEm: { gte: inicioHoje } } }),
     db.processo.count({ where: { status: "EM_ANDAMENTO" } }),
     db.avaria.count({ where: { data: { gte: inicioHoje } } }),
     db.presencaCarga.count({ where: { dataChegada: { gte: inicioHoje } } }),
+    db.processo.groupBy({
+      by: ["tipoOperacao"],
+      where: { criadoEm: { gte: inicioHoje } },
+      _count: { _all: true },
+    }),
+    db.processo.count({
+      where: { criadoEm: { gte: inicioHoje }, numeroReferencia: { not: null } },
+    }),
   ]);
 
   const cards = [
@@ -35,7 +44,7 @@ export default async function DashboardPage() {
         </p>
       </header>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {cards.map((c) => (
           <Link
             key={c.label}
@@ -46,6 +55,25 @@ export default async function DashboardPage() {
             <p className="font-display text-3xl">{c.valor}</p>
           </Link>
         ))}
+      </section>
+
+      <section className="border border-ardosia-200 bg-white rounded-sm p-5 mb-10">
+        <h2 className="font-display text-sm font-medium mb-4">Resumo de operações — hoje</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {["CARGA", "DESCARGA", "ENTREGA"].map((tipo) => {
+            const item = porTipoHoje.find((p) => p.tipoOperacao === tipo);
+            return (
+              <div key={tipo}>
+                <p className="text-xs text-ardosia-500 mb-1">{labelTipoOperacao(tipo)}</p>
+                <p className="font-display text-2xl">{item?._count._all || 0}</p>
+              </div>
+            );
+          })}
+          <div>
+            <p className="text-xs text-ardosia-500 mb-1">Notas do dia</p>
+            <p className="font-display text-2xl">{notasHoje}</p>
+          </div>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">

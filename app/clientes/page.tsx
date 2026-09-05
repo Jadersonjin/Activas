@@ -1,11 +1,27 @@
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
+import { SearchBar } from "@/components/SearchBar";
 import { db } from "@/lib/db";
 import { criarCliente } from "@/lib/actions/clientes";
 
-export default async function ClientesPage() {
+export default async function ClientesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const session = (await getSession())!;
-  const clientes = await db.cliente.findMany({ orderBy: { nome: "asc" } });
+  const clientes = await db.cliente.findMany({
+    where: q
+      ? {
+          OR: [
+            { nome: { contains: q, mode: "insensitive" } },
+            { cnpj: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : undefined,
+    orderBy: { nome: "asc" },
+  });
 
   return (
     <AppShell session={session}>
@@ -15,7 +31,9 @@ export default async function ClientesPage() {
       </header>
 
       <section className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
-        <div className="border border-ardosia-200 rounded-sm bg-white overflow-hidden">
+        <div>
+          <SearchBar action="/clientes" defaultValue={q} placeholder="Nome ou CNPJ..." />
+          <div className="border border-ardosia-200 rounded-sm bg-white overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-ardosia-100 text-left text-xs text-ardosia-600 uppercase tracking-wide">
@@ -47,12 +65,13 @@ export default async function ClientesPage() {
               {clientes.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-4 py-6 text-center text-ardosia-400 text-sm">
-                    Nenhum cliente cadastrado ainda.
+                    Nenhum cliente encontrado.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         <form
