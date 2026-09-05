@@ -82,7 +82,7 @@ export async function importarPainelDia(
   try {
     const buffer = Buffer.from(await arquivo.arrayBuffer());
     workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(buffer as unknown as Buffer);
   } catch {
     return { erro: "Não consegui ler esse arquivo. Confirme se é um .xlsx válido." };
   }
