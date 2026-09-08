@@ -1,0 +1,154 @@
+// Schema do banco de dados — Controle Operacional de Armazém
+// Rodar `npx prisma generate` após instalar dependências
+// Rodar `npx prisma migrate dev --name init` para criar as tabelas em desenvolvimento
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Papel {
+  ADMIN
+  OPERADOR
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  nome      String
+  email     String   @unique
+  senhaHash String
+  papel     Papel    @default(OPERADOR)
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+
+  processosCriados Processo[] @relation("ProcessoCriadoPor")
+}
+
+model Cliente {
+  id        String   @id @default(cuid())
+  nome      String
+  cnpj      String?
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+
+  usaPalletProprio Boolean @default(false) // se true, habilita o módulo de saldo de pallets do cliente
+
+  processos        Processo[]
+  avarias          Avaria[]
+  presencasCarga   PresencaCarga[]
+  movimentosPallet MovimentoPallet[]
+}
+
+// Controle diário de processos (chegada -> liberação -> operação)
+model Processo {
+  id        String   @id @default(cuid())
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+  clienteId String
+
+  data              DateTime @default(now())
+  placaVeiculo      String
+  motorista         String?
+  transportadora    String?  // nome da transportadora/carreteiro (da base externa)
+  tipoOperacao      String   // ex: Carga, Descarga, Entrega
+  numeroReferencia  String?  // NF, pedido, referência interna — pode conter várias NFs separadas por vírgula
+  quantidadeNotas   Int?     @default(1) // "Qtde NF" — total de notas desse processo
+
+  horaChegada       DateTime?
+  horaLiberacao     DateTime?
+  horaInicioOp      DateTime?
+  horaFimOp         DateTime?
+
+  observacoes       String?
+  status            String   @default("EM_ANDAMENTO") // EM_ANDAMENTO, FINALIZADO, CANCELADO
+
+  criadoPor         Usuario? @relation("ProcessoCriadoPor", fields: [criadoPorId], references: [id])
+  criadoPorId       String?
+  criadoEm          DateTime @default(now())
+
+  servicos          ServicoUtilizado[]
+}
+
+// Serviços utilizados em cada processo (pallet, stretch, etc.)
+model ServicoUtilizado {
+  id          String   @id @default(cuid())
+  processo    Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
+  processoId  String
+
+  tipoServico String   // PALLET, STRETCH, OUTRO
+  quantidade  Decimal  @default(0)
+  unidade     String   @default("UN") // UN, KG, ROLO...
+  palletProprioCliente Boolean @default(false) // se true, esta quantidade é abatida do saldo de pallets do cliente (não é cobrada)
+  observacao  String?
+
+  criadoEm    DateTime @default(now())
+}
+
+// Controle de saldo de pallets próprios do cliente (compra e consumo)
+model MovimentoPallet {
+  id         String   @id @default(cuid())
+  cliente    Cliente  @relation(fields: [clienteId], references: [id])
+  clienteId  String
+
+  tipo       String   // ENTRADA_COMPRA, SAIDA_CONSUMO, AJUSTE
+  quantidade Decimal
+  referencia String?  // nota de compra, processo relacionado etc.
+  data       DateTime @default(now())
+  observacao String?
+
+  criadoEm   DateTime @default(now())
+}
+
+// Controle de avarias
+model Avaria {
+  id             String   @id @default(cuid())
+  cliente        Cliente  @relation(fields: [clienteId], references: [id])
+  clienteId      String
+
+  codigoProduto  String
+  descricao      String
+  lote           String?
+  numeroNota     String?
+  pesoAvaria     Decimal
+  localizacao    String?  // endereço/posição no armazém
+  varredura      Boolean  @default(false) // se a avaria foi identificada em varredura
+  quantidadeVarreduraKg Decimal? // preenchido só quando varredura = true
+  fotoUrl        String?
+  observacao     String?
+
+  data           DateTime @default(now())
+  criadoEm       DateTime @default(now())
+}
+
+// Presença de carga — formalização da chegada de material (uma nota, vários produtos)
+model PresencaCarga {
+  id             String   @id @default(cuid())
+  cliente        Cliente  @relation(fields: [clienteId], references: [id])
+  clienteId      String
+
+  fornecedor     String
+  numeroNota     String
+  dataChegada    DateTime @default(now())
+  observacao     String?
+
+  criadoEm       DateTime @default(now())
+
+  itens          PresencaCargaItem[]
+}
+
+model PresencaCargaItem {
+  id              String        @id @default(cuid())
+  presencaCarga   PresencaCarga @relation(fields: [presencaCargaId], references: [id], onDelete: Cascade)
+  presencaCargaId String
+
+  codigoProduto   String
+  descricao       String
+  quantidade      Decimal
+  unidade         String @default("UN")
+
+  criadoEm        DateTime @default(now())
+}
