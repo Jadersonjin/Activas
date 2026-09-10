@@ -23,8 +23,8 @@ export default async function UsuariosPage() {
       </header>
 
       <section className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
-        <div className="border border-ardosia-200 rounded-sm bg-white overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="border border-ardosia-200 rounded-sm bg-white overflow-x-auto">
+  <table className="w-full text-sm min-w-[720px]">
             <thead>
               <tr className="bg-ardosia-100 text-left text-xs text-ardosia-600 uppercase tracking-wide">
                 <th className="px-4 py-3 font-normal">Nome</th>
