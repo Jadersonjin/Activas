@@ -15,6 +15,7 @@ datasource db {
 enum Papel {
   ADMIN
   OPERADOR
+  CONFERENTE
 }
 
 model Usuario {
@@ -42,6 +43,7 @@ model Cliente {
   avarias          Avaria[]
   presencasCarga   PresencaCarga[]
   movimentosPallet MovimentoPallet[]
+  inventarios      Inventario[]
 }
 
 // Controle diário de processos (chegada -> liberação -> operação)
@@ -113,6 +115,7 @@ model Avaria {
   descricao      String
   lote           String?
   numeroNota     String?
+  origem         String   @default("ORIGEM") // ORIGEM (avaria de origem) ou RADAR (avaria interna monitorada)
   pesoAvaria     Decimal
   localizacao    String?  // endereço/posição no armazém
   varredura      Boolean  @default(false) // se a avaria foi identificada em varredura
@@ -134,6 +137,7 @@ model PresencaCarga {
   numeroNota     String
   dataChegada    DateTime @default(now())
   observacao     String?
+  statusProcesso String   @default("PENDENTE") // PENDENTE ou CLASSIFICADO — se o processo já foi lançado no sistema
 
   criadoEm       DateTime @default(now())
 
@@ -151,4 +155,79 @@ model PresencaCargaItem {
   unidade         String @default("UN")
 
   criadoEm        DateTime @default(now())
+}
+
+// Histórico de alterações (quem criou/editou o quê)
+model LogAlteracao {
+  id           String   @id @default(cuid())
+  usuarioId    String?
+  usuarioNome  String
+  entidade     String   // Cliente, Avaria, PresencaCarga, MovimentoPallet, Usuario...
+  entidadeId   String?
+  acao         String   // CRIAR, EDITAR, EXCLUIR, RESETAR_SENHA...
+  resumo       String   // descrição legível do que mudou
+  criadoEm     DateTime @default(now())
+}
+
+// Inventário — ciclo completo de contagem de um cliente
+model Inventario {
+  id         String   @id @default(cuid())
+  cliente    Cliente  @relation(fields: [clienteId], references: [id])
+  clienteId  String
+
+  nome       String   // ex: "Inventário Setembro/2026"
+  status     String   @default("PREPARANDO") // PREPARANDO, EM_CONTAGEM, FINALIZADO
+  criadoEm   DateTime @default(now())
+
+  itens      InventarioItemEsperado[]
+  rodadas    InventarioRodada[]
+}
+
+// Saldo esperado de cada produto/lote, subido via planilha antes de abrir o inventário
+model InventarioItemEsperado {
+  id             String     @id @default(cuid())
+  inventario     Inventario @relation(fields: [inventarioId], references: [id], onDelete: Cascade)
+  inventarioId   String
+
+  descricao      String
+  lote           String
+  quantidadeEsperada Decimal
+
+  // Observação prévia (tipo Radar), marcada pelo admin antes de liberar pro conferente
+  tipoObservacao String?  // JA_TRATADO, TRATATIVA_ADMINISTRATIVA, OUTRO
+  observacao     String?
+
+  criadoEm       DateTime @default(now())
+
+  contagens      InventarioContagem[]
+}
+
+// Uma rodada de contagem (1ª, 2ª recontagem, 3ª...) dentro de um inventário
+model InventarioRodada {
+  id           String     @id @default(cuid())
+  inventario   Inventario @relation(fields: [inventarioId], references: [id], onDelete: Cascade)
+  inventarioId String
+
+  numero       Int      // 1, 2, 3...
+  status       String   @default("ABERTA") // ABERTA, FECHADA
+  criadoEm     DateTime @default(now())
+  fechadaEm    DateTime?
+
+  contagens    InventarioContagem[]
+}
+
+// Cada apontamento do conferente: quanto ele contou de um item esperado, numa rodada
+model InventarioContagem {
+  id             String                  @id @default(cuid())
+  rodada         InventarioRodada        @relation(fields: [rodadaId], references: [id], onDelete: Cascade)
+  rodadaId       String
+  itemEsperado   InventarioItemEsperado  @relation(fields: [itemEsperadoId], references: [id], onDelete: Cascade)
+  itemEsperadoId String
+
+  quantidadeContada Decimal
+  localizacao       String? // onde o conferente encontrou o item — ajuda numa recontagem
+  conferenteNome    String
+  conferenteId      String?
+
+  criadoEm       DateTime @default(now())
 }

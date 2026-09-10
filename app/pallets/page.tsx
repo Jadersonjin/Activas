@@ -1,7 +1,8 @@
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
 import { db } from "@/lib/db";
-import { registrarCompraPallet, registrarAjustePallet } from "@/lib/actions/pallets";
+import { registrarCompraPallet, registrarAjustePallet, registrarUtilizacaoPallet } from "@/lib/actions/pallets";
+import { fmtData } from "@/lib/br-date";
 
 export default async function PalletsPage() {
   const session = (await getSession())!;
@@ -32,7 +33,7 @@ export default async function PalletsPage() {
         <p className="font-mono text-xs text-ardosia-600">04 · PALLETS</p>
         <h1 className="font-display text-2xl font-medium mt-1">Saldo de pallets próprios</h1>
         <p className="text-sm text-ardosia-500 mt-1">
-          Apenas clientes marcados como &quot;pallet próprio&quot; aparecem aqui. O consumo é abatido automaticamente ao apontar um serviço de pallet no processo.
+          Apenas clientes marcados como &quot;pallet próprio&quot; aparecem aqui. Registre utilização, compras e ajustes de saldo abaixo.
         </p>
       </header>
 
@@ -52,7 +53,7 @@ export default async function PalletsPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px_280px] gap-0">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-0">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-ardosia-100 text-left text-xs text-ardosia-600 uppercase tracking-wide">
@@ -66,10 +67,10 @@ export default async function PalletsPage() {
                   {cliente.movimentosPallet.map((m) => (
                     <tr key={m.id} className="border-t border-ardosia-100">
                       <td className="px-4 py-2 font-mono text-xs">
-                        {new Date(m.data).toLocaleDateString("pt-BR")}
+                        {fmtData(m.data)}
                       </td>
                       <td className="px-4 py-2 text-xs">
-                        {m.tipo === "ENTRADA_COMPRA" ? "Compra" : m.tipo === "SAIDA_CONSUMO" ? "Consumo" : "Ajuste"}
+                        {m.tipo === "ENTRADA_COMPRA" ? "Compra" : m.tipo === "SAIDA_CONSUMO" ? "Utilização" : "Ajuste"}
                       </td>
                       <td className="px-4 py-2 font-mono">
                         {m.tipo === "SAIDA_CONSUMO" ? "-" : "+"}
@@ -88,47 +89,75 @@ export default async function PalletsPage() {
                 </tbody>
               </table>
 
-              <form action={registrarCompraPallet} className="p-4 border-t lg:border-t-0 lg:border-l border-ardosia-100 space-y-3">
-                <input type="hidden" name="clienteId" value={cliente.id} />
-                <p className="text-xs font-medium text-ardosia-700">Registrar compra</p>
-                <input
-                  name="quantidade"
-                  type="number"
-                  step="1"
-                  placeholder="Quantidade"
-                  required
-                  className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
-                />
-                <input
-                  name="referencia"
-                  placeholder="Nº da nota (opcional)"
-                  className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
-                />
-                <button className="w-full bg-verde-500 hover:opacity-90 text-white text-xs rounded-sm py-1.5 transition-opacity">
-                  Registrar compra
-                </button>
-              </form>
+              <div className="border-t lg:border-t-0 lg:border-l border-ardosia-100 divide-y divide-ardosia-100">
+                <form action={registrarUtilizacaoPallet} className="p-4 space-y-2">
+                  <input type="hidden" name="clienteId" value={cliente.id} />
+                  <p className="text-xs font-medium text-ardosia-700">Registrar utilização</p>
+                  <input
+                    name="quantidade"
+                    type="number"
+                    step="1"
+                    placeholder="Quantidade utilizada"
+                    required
+                    className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
+                  />
+                  <input
+                    name="notaSaida"
+                    placeholder="Nº da nota de saída (opcional)"
+                    className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
+                  />
+                  <input
+                    name="notaPallet"
+                    placeholder="Nº da nota de pallet (opcional)"
+                    className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
+                  />
+                  <button className="w-full bg-ambar-500 hover:bg-ambar-600 text-ardosia-950 font-medium text-xs rounded-sm py-1.5 transition-colors">
+                    Registrar utilização
+                  </button>
+                </form>
 
-              <form action={registrarAjustePallet} className="p-4 border-t lg:border-t-0 lg:border-l border-ardosia-100 space-y-3">
-                <input type="hidden" name="clienteId" value={cliente.id} />
-                <p className="text-xs font-medium text-ardosia-700">Ajuste manual</p>
-                <input
-                  name="quantidade"
-                  type="number"
-                  step="1"
-                  placeholder="+ ou - quantidade"
-                  required
-                  className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
-                />
-                <input
-                  name="observacao"
-                  placeholder="Motivo do ajuste"
-                  className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
-                />
-                <button className="w-full bg-ardosia-700 hover:bg-ardosia-600 text-white text-xs rounded-sm py-1.5 transition-colors">
-                  Aplicar ajuste
-                </button>
-              </form>
+                <form action={registrarCompraPallet} className="p-4 space-y-2">
+                  <input type="hidden" name="clienteId" value={cliente.id} />
+                  <p className="text-xs font-medium text-ardosia-700">Registrar compra</p>
+                  <input
+                    name="quantidade"
+                    type="number"
+                    step="1"
+                    placeholder="Quantidade"
+                    required
+                    className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
+                  />
+                  <input
+                    name="referencia"
+                    placeholder="Nº da nota (opcional)"
+                    className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
+                  />
+                  <button className="w-full bg-verde-500 hover:opacity-90 text-white text-xs rounded-sm py-1.5 transition-opacity">
+                    Registrar compra
+                  </button>
+                </form>
+
+                <form action={registrarAjustePallet} className="p-4 space-y-2">
+                  <input type="hidden" name="clienteId" value={cliente.id} />
+                  <p className="text-xs font-medium text-ardosia-700">Ajuste manual</p>
+                  <input
+                    name="quantidade"
+                    type="number"
+                    step="1"
+                    placeholder="+ ou - quantidade"
+                    required
+                    className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
+                  />
+                  <input
+                    name="observacao"
+                    placeholder="Motivo do ajuste"
+                    className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
+                  />
+                  <button className="w-full bg-ardosia-700 hover:bg-ardosia-600 text-white text-xs rounded-sm py-1.5 transition-colors">
+                    Aplicar ajuste
+                  </button>
+                </form>
+              </div>
             </div>
           </section>
         ))}

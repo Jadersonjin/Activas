@@ -2,35 +2,23 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
 import { db } from "@/lib/db";
-import { labelTipoOperacao } from "@/lib/labels";
+import { fmtDataLonga, hojeBR, inicioDiaBR } from "@/lib/br-date";
 
 export default async function DashboardPage() {
   const session = (await getSession())!;
 
-  const inicioHoje = new Date();
-  inicioHoje.setHours(0, 0, 0, 0);
+  const inicioHoje = inicioDiaBR(hojeBR());
 
-  const [processosHoje, emAndamento, avariasHoje, presencasHoje, porTipoHoje, somaNotasHoje] = await Promise.all([
-    db.processo.count({ where: { criadoEm: { gte: inicioHoje } } }),
-    db.processo.count({ where: { status: "EM_ANDAMENTO" } }),
+  const [avariasHoje, presencasHoje, radarAbertos] = await Promise.all([
     db.avaria.count({ where: { data: { gte: inicioHoje } } }),
     db.presencaCarga.count({ where: { dataChegada: { gte: inicioHoje } } }),
-    db.processo.groupBy({
-      by: ["tipoOperacao"],
-      where: { criadoEm: { gte: inicioHoje } },
-      _count: { _all: true },
-    }),
-    db.processo.aggregate({
-      where: { criadoEm: { gte: inicioHoje } },
-      _sum: { quantidadeNotas: true },
-    }),
+    db.avaria.count({ where: { origem: "RADAR" } }),
   ]);
 
   const cards = [
-    { label: "Processos hoje", valor: processosHoje, href: "/processos" },
-    { label: "Em andamento", valor: emAndamento, href: "/processos" },
     { label: "Avarias hoje", valor: avariasHoje, href: "/avarias" },
     { label: "Presenças de carga hoje", valor: presencasHoje, href: "/presenca-carga" },
+    { label: "Itens no Radar", valor: radarAbertos, href: "/avarias/radar" },
   ];
 
   return (
@@ -41,11 +29,11 @@ export default async function DashboardPage() {
           Olá, {session.nome.split(" ")[0]}
         </h1>
         <p className="text-sm text-ardosia-500 mt-1">
-          {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+          {fmtDataLonga(new Date())}
         </p>
       </header>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
         {cards.map((c) => (
           <Link
             key={c.label}
@@ -58,33 +46,7 @@ export default async function DashboardPage() {
         ))}
       </section>
 
-      <section className="border border-ardosia-200 bg-white rounded-sm p-5 mb-10">
-        <h2 className="font-display text-sm font-medium mb-4">Resumo de operações — hoje</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {["CARGA", "DESCARGA", "ENTREGA"].map((tipo) => {
-            const item = porTipoHoje.find((p) => p.tipoOperacao === tipo);
-            return (
-              <div key={tipo}>
-                <p className="text-xs text-ardosia-500 mb-1">{labelTipoOperacao(tipo)}</p>
-                <p className="font-display text-2xl">{item?._count._all || 0}</p>
-              </div>
-            );
-          })}
-          <div>
-            <p className="text-xs text-ardosia-500 mb-1">Notas do dia</p>
-            <p className="font-display text-2xl">{somaNotasHoje._sum.quantidadeNotas || 0}</p>
-          </div>
-        </div>
-      </section>
-
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Link
-          href="/processos/novo"
-          className="border border-ardosia-200 bg-white rounded-sm p-5 hover:border-ambar-500 transition-colors"
-        >
-          <p className="font-display text-sm font-medium mb-1">+ Novo processo</p>
-          <p className="text-xs text-ardosia-500">Registrar chegada de um veículo</p>
-        </Link>
         <Link
           href="/presenca-carga"
           className="border border-ardosia-200 bg-white rounded-sm p-5 hover:border-ambar-500 transition-colors"
@@ -93,11 +55,18 @@ export default async function DashboardPage() {
           <p className="text-xs text-ardosia-500">Formalizar chegada de material</p>
         </Link>
         <Link
+          href="/avarias"
+          className="border border-ardosia-200 bg-white rounded-sm p-5 hover:border-ambar-500 transition-colors"
+        >
+          <p className="font-display text-sm font-medium mb-1">+ Registrar avaria</p>
+          <p className="text-xs text-ardosia-500">Origem ou Radar</p>
+        </Link>
+        <Link
           href="/relatorios"
           className="border border-ardosia-200 bg-white rounded-sm p-5 hover:border-ambar-500 transition-colors"
         >
           <p className="font-display text-sm font-medium mb-1">📊 Relatórios</p>
-          <p className="text-xs text-ardosia-500">Resumo diário e mensal</p>
+          <p className="text-xs text-ardosia-500">Relatório mensal de presença de carga</p>
         </Link>
       </section>
     </AppShell>

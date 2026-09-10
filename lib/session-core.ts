@@ -9,7 +9,7 @@ export type SessionPayload = {
   userId: string;
   nome: string;
   email: string;
-  papel: "ADMIN" | "OPERADOR";
+  papel: "ADMIN" | "OPERADOR" | "CONFERENTE";
 };
 
 function bufferToHex(buffer: ArrayBuffer) {

@@ -1,88 +1,56 @@
+import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
 import { db } from "@/lib/db";
-import { labelTipoOperacao } from "@/lib/labels";
+import { hojeBR, inicioDiaBR, fimDiaBR } from "@/lib/br-date";
 
-function inicioDoDia(dataStr: string) {
-  return new Date(`${dataStr}T00:00:00`);
+function primeiroDiaMes(mes: string) {
+  return `${mes}-01`;
 }
-function fimDoDia(dataStr: string) {
-  return new Date(`${dataStr}T23:59:59.999`);
-}
-function hojeISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-function mesAtual() {
-  return new Date().toISOString().slice(0, 7); // YYYY-MM
-}
-
-async function resumoPeriodo(inicio: Date, fim: Date) {
-  const [porTipo, somaNotas, totalProcessos] = await Promise.all([
-    db.processo.groupBy({
-      by: ["tipoOperacao"],
-      where: { data: { gte: inicio, lte: fim } },
-      _count: { _all: true },
-    }),
-    db.processo.aggregate({
-      where: { data: { gte: inicio, lte: fim } },
-      _sum: { quantidadeNotas: true },
-    }),
-    db.processo.count({ where: { data: { gte: inicio, lte: fim } } }),
-  ]);
-  return { porTipo, totalNotas: somaNotas._sum.quantidadeNotas || 0, totalProcessos };
+function ultimoDiaMes(mes: string) {
+  const [ano, mesNum] = mes.split("-").map(Number);
+  const ultimo = new Date(ano, mesNum, 0).getDate();
+  return `${mes}-${String(ultimo).padStart(2, "0")}`;
 }
 
 export default async function RelatoriosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dia?: string; mes?: string }>;
+  searchParams: Promise<{ mes?: string }>;
 }) {
-  const { dia, mes } = await searchParams;
+  const { mes } = await searchParams;
   const session = (await getSession())!;
+  const mesSelecionado = mes || hojeBR().slice(0, 7);
 
-  const diaSelecionado = dia || hojeISO();
-  const mesSelecionado = mes || mesAtual();
+  const inicio = inicioDiaBR(primeiroDiaMes(mesSelecionado));
+  const fim = fimDiaBR(ultimoDiaMes(mesSelecionado));
 
-  const [ano, mesNum] = mesSelecionado.split("-").map(Number);
-  const inicioMes = new Date(ano, (mesNum || 1) - 1, 1);
-  const fimMes = new Date(ano, mesNum || 1, 0, 23, 59, 59, 999);
-
-  const [resumoDia, resumoMes] = await Promise.all([
-    resumoPeriodo(inicioDoDia(diaSelecionado), fimDoDia(diaSelecionado)),
-    resumoPeriodo(inicioMes, fimMes),
+  const [totalNotas, totalItens, clientesAtendidos] = await Promise.all([
+    db.presencaCarga.count({ where: { dataChegada: { gte: inicio, lte: fim } } }),
+    db.presencaCargaItem.count({
+      where: { presencaCarga: { dataChegada: { gte: inicio, lte: fim } } },
+    }),
+    db.presencaCarga.findMany({
+      where: { dataChegada: { gte: inicio, lte: fim } },
+      distinct: ["clienteId"],
+      select: { clienteId: true },
+    }),
   ]);
+
+  const linkRelatorioMes = `/presenca-carga?de=${primeiroDiaMes(mesSelecionado)}&ate=${ultimoDiaMes(mesSelecionado)}`;
 
   return (
     <AppShell session={session}>
       <header className="mb-8">
         <p className="font-mono text-xs text-ardosia-600">07 · RELATÓRIOS</p>
-        <h1 className="font-display text-2xl font-medium mt-1">Resumo de operações</h1>
+        <h1 className="font-display text-2xl font-medium mt-1">Relatórios</h1>
+        <p className="text-sm text-ardosia-500 mt-1">Relatório mensal de presença de carga.</p>
       </header>
-
-      <section className="border border-ardosia-200 rounded-sm bg-white p-5 mb-8">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <h2 className="font-display text-sm font-medium">Resumo diário</h2>
-          <form action="/relatorios" className="flex items-center gap-2">
-            <input type="hidden" name="mes" value={mesSelecionado} />
-            <input
-              type="date"
-              name="dia"
-              defaultValue={diaSelecionado}
-              className="border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
-            />
-            <button className="text-sm border border-ardosia-300 rounded-sm px-3 py-1.5 hover:border-ambar-500 hover:text-ambar-600 transition-colors">
-              Ver dia
-            </button>
-          </form>
-        </div>
-        <ResumoGrid resumo={resumoDia} />
-      </section>
 
       <section className="border border-ardosia-200 rounded-sm bg-white p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <h2 className="font-display text-sm font-medium">Resumo mensal</h2>
+          <h2 className="font-display text-sm font-medium">Resumo do mês</h2>
           <form action="/relatorios" className="flex items-center gap-2">
-            <input type="hidden" name="dia" value={diaSelecionado} />
             <input
               type="month"
               name="mes"
@@ -94,36 +62,33 @@ export default async function RelatoriosPage({
             </button>
           </form>
         </div>
-        <ResumoGrid resumo={resumoMes} />
+
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div>
+            <p className="text-xs text-ardosia-500 mb-1">Presenças de carga</p>
+            <p className="font-display text-2xl">{totalNotas}</p>
+          </div>
+          <div>
+            <p className="text-xs text-ardosia-500 mb-1">Itens recebidos</p>
+            <p className="font-display text-2xl">{totalItens}</p>
+          </div>
+          <div>
+            <p className="text-xs text-ardosia-500 mb-1">Clientes atendidos</p>
+            <p className="font-display text-2xl">{clientesAtendidos.length}</p>
+          </div>
+        </div>
+
+        <Link
+          href={linkRelatorioMes}
+          className="inline-block bg-ardosia-950 hover:bg-ardosia-900 text-ardosia-50 text-sm rounded-sm px-4 py-2 transition-colors"
+        >
+          Ver presenças de carga do mês (Excel / PDF)
+        </Link>
+        <p className="text-xs text-ardosia-500 mt-2">
+          Abre a tela de Presença de Carga já filtrada por esse mês inteiro — de lá dá pra baixar em
+          Excel ou gerar o relatório em PDF pra enviar ao cliente.
+        </p>
       </section>
     </AppShell>
-  );
-}
-
-function ResumoGrid({
-  resumo,
-}: {
-  resumo: { porTipo: { tipoOperacao: string; _count: { _all: number } }[]; totalNotas: number; totalProcessos: number };
-}) {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-      {["CARGA", "DESCARGA", "ENTREGA"].map((tipo) => {
-        const item = resumo.porTipo.find((p) => p.tipoOperacao === tipo);
-        return (
-          <div key={tipo}>
-            <p className="text-xs text-ardosia-500 mb-1">{labelTipoOperacao(tipo)}</p>
-            <p className="font-display text-2xl">{item?._count._all || 0}</p>
-          </div>
-        );
-      })}
-      <div>
-        <p className="text-xs text-ardosia-500 mb-1">Total de processos</p>
-        <p className="font-display text-2xl">{resumo.totalProcessos}</p>
-      </div>
-      <div>
-        <p className="text-xs text-ardosia-500 mb-1">Total de notas</p>
-        <p className="font-display text-2xl">{resumo.totalNotas}</p>
-      </div>
-    </div>
   );
 }

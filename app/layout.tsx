@@ -22,7 +22,7 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "Brasmeg | Controle Operacional",
-  description: "Controle diario de processos, servicos, avarias e presenca de carga - Brasmeg Transportes e Armazenagem",
+  description: "Controle de presenca de carga, avarias e pallets - Brasmeg Transportes e Armazenagem",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

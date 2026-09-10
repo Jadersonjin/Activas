@@ -1,51 +1,117 @@
+import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
-import { FilterBar } from "@/components/FilterBar";
+import { Pagination } from "@/components/Pagination";
 import { db } from "@/lib/db";
 import { registrarAvaria } from "@/lib/actions/avarias";
 import { rangeDia } from "@/lib/date-range";
+import { fmtData } from "@/lib/br-date";
+import { paginar, totalPaginas as calcTotalPaginas } from "@/lib/pagination";
+
+function labelOrigem(v: string) {
+  return v === "RADAR" ? "Radar" : "Avaria de origem";
+}
 
 export default async function AvariasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; de?: string; ate?: string }>;
+  searchParams: Promise<{ q?: string; de?: string; ate?: string; origem?: string; pagina?: string }>;
 }) {
-  const { q, de, ate } = await searchParams;
+  const { q, de, ate, origem, pagina } = await searchParams;
   const session = (await getSession())!;
-  const [avarias, clientes] = await Promise.all([
-    db.avaria.findMany({
-      where: {
-        data: rangeDia(de, ate),
-        ...(q
-          ? {
-              OR: [
-                { codigoProduto: { contains: q, mode: "insensitive" } },
-                { descricao: { contains: q, mode: "insensitive" } },
-                { lote: { contains: q, mode: "insensitive" } },
-                { numeroNota: { contains: q, mode: "insensitive" } },
-                { localizacao: { contains: q, mode: "insensitive" } },
-                { cliente: { nome: { contains: q, mode: "insensitive" } } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: { data: "desc" },
-      take: 200,
-      include: { cliente: true },
-    }),
+  const { skip, take, paginaAtual } = paginar(pagina);
+  const where = {
+    data: rangeDia(de, ate),
+    ...(origem ? { origem } : {}),
+    ...(q
+      ? {
+          OR: [
+            { codigoProduto: { contains: q, mode: "insensitive" as const } },
+            { descricao: { contains: q, mode: "insensitive" as const } },
+            { lote: { contains: q, mode: "insensitive" as const } },
+            { numeroNota: { contains: q, mode: "insensitive" as const } },
+            { localizacao: { contains: q, mode: "insensitive" as const } },
+            { cliente: { nome: { contains: q, mode: "insensitive" as const } } },
+          ],
+        }
+      : {}),
+  };
+  const [avarias, total, clientes] = await Promise.all([
+    db.avaria.findMany({ where, orderBy: { data: "desc" }, skip, take, include: { cliente: true } }),
+    db.avaria.count({ where }),
     db.cliente.findMany({ where: { ativo: true }, orderBy: { nome: "asc" } }),
   ]);
 
+  const temFiltro = Boolean(q || de || ate || origem);
+
   return (
     <AppShell session={session}>
-      <header className="mb-8">
-        <p className="font-mono text-xs text-ardosia-600">05 · AVARIAS</p>
-        <h1 className="font-display text-2xl font-medium mt-1">Controle de avarias</h1>
+      <header className="mb-8 flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <p className="font-mono text-xs text-ardosia-600">04 · AVARIAS</p>
+          <h1 className="font-display text-2xl font-medium mt-1">Controle de avarias</h1>
+        </div>
+        <Link
+          href="/avarias/radar"
+          className="text-sm border border-ambar-500/50 text-ambar-600 rounded-sm px-4 py-2 hover:bg-ambar-500/10 transition-colors bg-white"
+        >
+          🎯 Painel do Radar
+        </Link>
       </header>
 
       <section className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
         <div>
-          <FilterBar action="/avarias" q={q} de={de} ate={ate} placeholder="Produto, lote, nota, local, cliente..." />
+          <form action="/avarias" className="flex flex-wrap items-end gap-2 mb-4">
+            <div>
+              <label className="block text-[11px] text-ardosia-500 mb-1">Buscar</label>
+              <input
+                type="text"
+                name="q"
+                defaultValue={q}
+                placeholder="Produto, lote, nota, local, cliente..."
+                className="w-full max-w-xs border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] text-ardosia-500 mb-1">Tipo</label>
+              <select
+                name="origem"
+                defaultValue={origem || ""}
+                className="border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500 bg-white"
+              >
+                <option value="">Todos</option>
+                <option value="ORIGEM">Avaria de origem</option>
+                <option value="RADAR">Radar</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] text-ardosia-500 mb-1">De</label>
+              <input
+                type="date"
+                name="de"
+                defaultValue={de}
+                className="border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] text-ardosia-500 mb-1">Até</label>
+              <input
+                type="date"
+                name="ate"
+                defaultValue={ate}
+                className="border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500 bg-white"
+              />
+            </div>
+            <button className="text-sm border border-ardosia-300 rounded-sm px-4 py-2 hover:border-ambar-500 hover:text-ambar-600 transition-colors bg-white">
+              Filtrar
+            </button>
+            {temFiltro && (
+              <a href="/avarias" className="text-sm text-ardosia-500 hover:text-ardosia-700 py-2">
+                Limpar
+              </a>
+            )}
+          </form>
+
           <div className="border border-ardosia-200 rounded-sm bg-white overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -56,13 +122,15 @@ export default async function AvariasPage({
                   <th className="px-4 py-2 font-normal">Lote / Nota</th>
                   <th className="px-4 py-2 font-normal">Peso</th>
                   <th className="px-4 py-2 font-normal">Local</th>
-                  <th className="px-4 py-2 font-normal">Origem</th>
+                  <th className="px-4 py-2 font-normal">Tipo</th>
+                  <th className="px-4 py-2 font-normal">Identificação</th>
+                  <th className="px-4 py-2 font-normal"></th>
                 </tr>
               </thead>
               <tbody>
                 {avarias.map((a) => (
                   <tr key={a.id} className="border-t border-ardosia-100 align-top">
-                    <td className="px-4 py-2 font-mono text-xs">{new Date(a.data).toLocaleDateString("pt-BR")}</td>
+                    <td className="px-4 py-2 font-mono text-xs">{fmtData(a.data)}</td>
                     <td className="px-4 py-2">{a.cliente.nome}</td>
                     <td className="px-4 py-2">
                       <p className="font-mono text-xs">{a.codigoProduto}</p>
@@ -73,16 +141,32 @@ export default async function AvariasPage({
                     </td>
                     <td className="px-4 py-2 font-mono">{a.pesoAvaria.toString()} kg</td>
                     <td className="px-4 py-2 text-xs">{a.localizacao || "—"}</td>
+                    <td className="px-4 py-2">
+                      <span
+                        className={
+                          a.origem === "RADAR"
+                            ? "text-xs font-medium text-ambar-600 bg-ambar-500/10 px-2 py-0.5 rounded-sm"
+                            : "text-xs text-ardosia-500"
+                        }
+                      >
+                        {labelOrigem(a.origem)}
+                      </span>
+                    </td>
                     <td className="px-4 py-2 text-xs">
                       {a.varredura
                         ? `Varredura${a.quantidadeVarreduraKg ? ` · ${a.quantidadeVarreduraKg.toString()} kg` : ""}`
                         : "Apontamento direto"}
                     </td>
+                    <td className="px-4 py-2 text-right">
+                      <Link href={`/avarias/${a.id}/editar`} className="text-xs text-ardosia-500 hover:text-ambar-600">
+                        Editar
+                      </Link>
+                    </td>
                   </tr>
                 ))}
                 {avarias.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-ardosia-400 text-sm">
+                    <td colSpan={9} className="px-4 py-6 text-center text-ardosia-400 text-sm">
                       Nenhuma avaria encontrada.
                     </td>
                   </tr>
@@ -90,10 +174,35 @@ export default async function AvariasPage({
               </tbody>
             </table>
           </div>
+          <Pagination
+            action="/avarias"
+            paginaAtual={paginaAtual}
+            totalPaginas={calcTotalPaginas(total)}
+            paramsAtuais={{ q, de, ate, origem }}
+          />
         </div>
 
         <form action={registrarAvaria} className="border border-ardosia-200 rounded-sm bg-white p-5 h-fit space-y-4">
           <h2 className="font-display text-sm font-medium">Registrar avaria</h2>
+
+          <div>
+            <label className="block text-xs text-ardosia-600 mb-1">Tipo</label>
+            <div className="flex gap-4 text-sm">
+              <label className="flex items-center gap-1.5">
+                <input type="radio" name="origem" value="ORIGEM" defaultChecked className="accent-ambar-500" />
+                Avaria de origem
+              </label>
+              <label className="flex items-center gap-1.5">
+                <input type="radio" name="origem" value="RADAR" className="accent-ambar-500" />
+                Radar
+              </label>
+            </div>
+            <p className="text-[11px] text-ardosia-500 mt-1">
+              Radar = avaria interna monitorada. Produtos marcados como Radar geram aviso ao aparecerem
+              de novo numa presença de carga.
+            </p>
+          </div>
+
           <div>
             <label className="block text-xs text-ardosia-600 mb-1">Cliente</label>
             <select

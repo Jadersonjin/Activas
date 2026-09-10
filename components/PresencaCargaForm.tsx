@@ -4,9 +4,12 @@ import { useState } from "react";
 import { registrarPresencaCarga } from "@/lib/actions/presenca-carga";
 
 type Cliente = { id: string; nome: string };
+type AlertaRadar = { descricao: string; lote: string | null; data: string; observacao: string | null };
 
 export function PresencaCargaForm({ clientes }: { clientes: Cliente[] }) {
   const [linhas, setLinhas] = useState([0]);
+  const [clienteId, setClienteId] = useState("");
+  const [alertas, setAlertas] = useState<Record<number, AlertaRadar[]>>({});
 
   function adicionarLinha() {
     setLinhas((prev) => [...prev, (prev[prev.length - 1] ?? 0) + 1]);
@@ -14,6 +17,27 @@ export function PresencaCargaForm({ clientes }: { clientes: Cliente[] }) {
 
   function removerLinha(id: number) {
     setLinhas((prev) => (prev.length > 1 ? prev.filter((l) => l !== id) : prev));
+    setAlertas((prev) => {
+      const copia = { ...prev };
+      delete copia[id];
+      return copia;
+    });
+  }
+
+  async function verificarRadar(id: number, codigo: string) {
+    if (!clienteId || !codigo.trim()) {
+      setAlertas((prev) => ({ ...prev, [id]: [] }));
+      return;
+    }
+    try {
+      const resp = await fetch(
+        `/api/avarias/radar-check?clienteId=${encodeURIComponent(clienteId)}&codigo=${encodeURIComponent(codigo.trim())}`
+      );
+      const data = await resp.json();
+      setAlertas((prev) => ({ ...prev, [id]: data.encontrados || [] }));
+    } catch {
+      // silencioso — não bloqueia o preenchimento se a checagem falhar
+    }
   }
 
   return (
@@ -24,6 +48,8 @@ export function PresencaCargaForm({ clientes }: { clientes: Cliente[] }) {
         <select
           name="clienteId"
           required
+          value={clienteId}
+          onChange={(e) => setClienteId(e.target.value)}
           className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
         >
           <option value="">Selecione...</option>
@@ -81,8 +107,25 @@ export function PresencaCargaForm({ clientes }: { clientes: Cliente[] }) {
                 name="itemCodigoProduto"
                 placeholder="Código do produto"
                 required
+                onBlur={(e) => verificarRadar(id, e.target.value)}
                 className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
               />
+
+              {alertas[id] && alertas[id].length > 0 && (
+                <div className="bg-ambar-500/10 border border-ambar-500/40 rounded-sm p-2 space-y-1">
+                  <p className="text-[11px] font-medium text-ambar-600">
+                    ⚠ Esse produto está no Radar — confira na descarga
+                  </p>
+                  {alertas[id].map((a, i) => (
+                    <p key={i} className="text-[11px] text-ardosia-600">
+                      {a.data} · {a.descricao}
+                      {a.lote ? ` · lote ${a.lote}` : ""}
+                      {a.observacao ? ` — ${a.observacao}` : ""}
+                    </p>
+                  ))}
+                </div>
+              )}
+
               <input
                 name="itemDescricao"
                 placeholder="Descrição"

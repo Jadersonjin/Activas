@@ -1,27 +1,32 @@
+import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
 import { SearchBar } from "@/components/SearchBar";
+import { Pagination } from "@/components/Pagination";
 import { db } from "@/lib/db";
 import { criarCliente } from "@/lib/actions/clientes";
+import { paginar, totalPaginas as calcTotalPaginas } from "@/lib/pagination";
 
 export default async function ClientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; pagina?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, pagina } = await searchParams;
   const session = (await getSession())!;
-  const clientes = await db.cliente.findMany({
-    where: q
-      ? {
-          OR: [
-            { nome: { contains: q, mode: "insensitive" } },
-            { cnpj: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : undefined,
-    orderBy: { nome: "asc" },
-  });
+  const { skip, take, paginaAtual } = paginar(pagina);
+  const where = q
+    ? {
+        OR: [
+          { nome: { contains: q, mode: "insensitive" as const } },
+          { cnpj: { contains: q, mode: "insensitive" as const } },
+        ],
+      }
+    : undefined;
+  const [clientes, total] = await Promise.all([
+    db.cliente.findMany({ where, orderBy: { nome: "asc" }, skip, take }),
+    db.cliente.count({ where }),
+  ]);
 
   return (
     <AppShell session={session}>
@@ -41,6 +46,7 @@ export default async function ClientesPage({
                 <th className="px-4 py-3 font-normal">CNPJ</th>
                 <th className="px-4 py-3 font-normal">Pallet próprio</th>
                 <th className="px-4 py-3 font-normal">Status</th>
+                <th className="px-4 py-3 font-normal"></th>
               </tr>
             </thead>
             <tbody>
@@ -60,11 +66,16 @@ export default async function ClientesPage({
                       {c.ativo ? "Ativo" : "Inativo"}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    <Link href={`/clientes/${c.id}/editar`} className="text-xs text-ardosia-500 hover:text-ambar-600">
+                      Editar
+                    </Link>
+                  </td>
                 </tr>
               ))}
               {clientes.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-ardosia-400 text-sm">
+                  <td colSpan={5} className="px-4 py-6 text-center text-ardosia-400 text-sm">
                     Nenhum cliente encontrado.
                   </td>
                 </tr>
@@ -72,6 +83,7 @@ export default async function ClientesPage({
             </tbody>
           </table>
           </div>
+          <Pagination action="/clientes" paginaAtual={paginaAtual} totalPaginas={calcTotalPaginas(total)} paramsAtuais={{ q }} />
         </div>
 
         <form

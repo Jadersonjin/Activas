@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import ExcelJS from "exceljs";
 import { db } from "@/lib/db";
 import { rangeDia } from "@/lib/date-range";
+import { fmtData } from "@/lib/br-date";
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q") || undefined;
@@ -39,24 +40,30 @@ export async function GET(req: NextRequest) {
     { header: "Descrição", key: "descricao", width: 32 },
     { header: "Quantidade", key: "quantidade", width: 12 },
     { header: "Unidade", key: "unidade", width: 10 },
+    { header: "Status do processo", key: "statusProcesso", width: 18 },
     { header: "Observação", key: "observacao", width: 28 },
   ];
   sheet.getRow(1).font = { bold: true };
 
+  function labelStatus(s: string) {
+    return s === "CLASSIFICADO" ? "Classificado" : "Pendente";
+  }
+
   for (const registro of registros) {
     if (registro.itens.length === 0) {
       sheet.addRow({
-        dataChegada: registro.dataChegada.toLocaleDateString("pt-BR"),
+        dataChegada: fmtData(registro.dataChegada),
         cliente: registro.cliente.nome,
         fornecedor: registro.fornecedor,
         numeroNota: registro.numeroNota,
+        statusProcesso: labelStatus(registro.statusProcesso),
         observacao: registro.observacao || "",
       });
       continue;
     }
     for (const item of registro.itens) {
       sheet.addRow({
-        dataChegada: registro.dataChegada.toLocaleDateString("pt-BR"),
+        dataChegada: fmtData(registro.dataChegada),
         cliente: registro.cliente.nome,
         fornecedor: registro.fornecedor,
         numeroNota: registro.numeroNota,
@@ -64,6 +71,7 @@ export async function GET(req: NextRequest) {
         descricao: item.descricao,
         quantidade: item.quantidade.toString(),
         unidade: item.unidade,
+        statusProcesso: labelStatus(registro.statusProcesso),
         observacao: registro.observacao || "",
       });
     }
