@@ -41,7 +41,7 @@ export default async function HistoricoPage({
   return (
     <AppShell session={session}>
       <header className="mb-8">
-        <p className="font-mono text-xs text-ardosia-600">08 · HISTÓRICO</p>
+        <p className="font-mono text-xs text-ardosia-600">09 · HISTÓRICO</p>
         <h1 className="font-display text-2xl font-medium mt-1">Histórico de alterações</h1>
       </header>
 

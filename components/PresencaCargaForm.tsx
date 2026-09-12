@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { registrarPresencaCarga } from "@/lib/actions/presenca-carga";
+import { ProdutoAutocomplete } from "@/components/ProdutoAutocomplete";
 
 type Cliente = { id: string; nome: string };
 type AlertaRadar = { descricao: string; lote: string | null; data: string; observacao: string | null };
@@ -103,12 +104,11 @@ export function PresencaCargaForm({ clientes }: { clientes: Cliente[] }) {
                 </button>
               )}
               <p className="text-[11px] text-ardosia-400">Produto {idx + 1}</p>
-              <input
-                name="itemCodigoProduto"
-                placeholder="Código do produto"
-                required
-                onBlur={(e) => verificarRadar(id, e.target.value)}
-                className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
+              <ProdutoAutocomplete
+                clienteId={clienteId}
+                nomeCodigo="itemCodigoProduto"
+                nomeDescricao="itemDescricao"
+                onCodigoAlterado={(codigo) => verificarRadar(id, codigo)}
               />
 
               {alertas[id] && alertas[id].length > 0 && (
@@ -126,12 +126,6 @@ export function PresencaCargaForm({ clientes }: { clientes: Cliente[] }) {
                 </div>
               )}
 
-              <input
-                name="itemDescricao"
-                placeholder="Descrição"
-                required
-                className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
-              />
               <div className="grid grid-cols-2 gap-2">
                 <input
                   name="itemQuantidade"

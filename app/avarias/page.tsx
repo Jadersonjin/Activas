@@ -4,6 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { Pagination } from "@/components/Pagination";
 import { db } from "@/lib/db";
 import { registrarAvaria } from "@/lib/actions/avarias";
+import { AvariaProdutoFields } from "@/components/AvariaProdutoFields";
 import { rangeDia } from "@/lib/date-range";
 import { fmtData } from "@/lib/br-date";
 import { paginar, totalPaginas as calcTotalPaginas } from "@/lib/pagination";
@@ -203,43 +204,11 @@ export default async function AvariasPage({
             </p>
           </div>
 
+          <AvariaProdutoFields clientes={clientes} />
           <div>
-            <label className="block text-xs text-ardosia-600 mb-1">Cliente</label>
-            <select
-              name="clienteId"
-              required
-              className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
-            >
-              <option value="">Selecione...</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-ardosia-600 mb-1">Código do produto</label>
-              <input
-                name="codigoProduto"
-                required
-                className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-ardosia-600 mb-1">Lote</label>
-              <input
-                name="lote"
-                className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-ardosia-600 mb-1">Descrição do produto</label>
+            <label className="block text-xs text-ardosia-600 mb-1">Lote</label>
             <input
-              name="descricao"
-              required
+              name="lote"
               className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
             />
           </div>

@@ -7,15 +7,16 @@ import type { SessionPayload } from "@/lib/session";
 const NAV = [
   { href: "/dashboard", label: "Visão geral", cod: "01" },
   { href: "/clientes", label: "Clientes", cod: "02" },
-  { href: "/pallets", label: "Saldo de pallets", cod: "03" },
-  { href: "/avarias", label: "Avarias", cod: "04" },
-  { href: "/presenca-carga", label: "Presença de carga", cod: "05" },
-  { href: "/inventarios", label: "Inventários", cod: "06" },
-  { href: "/relatorios", label: "Relatórios", cod: "07" },
-  { href: "/historico", label: "Histórico", cod: "08" },
+  { href: "/produtos", label: "Produtos", cod: "03" },
+  { href: "/pallets", label: "Saldo de pallets", cod: "04" },
+  { href: "/avarias", label: "Avarias", cod: "05" },
+  { href: "/presenca-carga", label: "Presença de carga", cod: "06" },
+  { href: "/inventarios", label: "Inventários", cod: "07" },
+  { href: "/relatorios", label: "Relatórios", cod: "08" },
+  { href: "/historico", label: "Histórico", cod: "09" },
 ];
 
-const NAV_ADMIN = [{ href: "/usuarios", label: "Usuários", cod: "09" }];
+const NAV_ADMIN = [{ href: "/usuarios", label: "Usuários", cod: "10" }];
 
 export function AppShell({
   session,

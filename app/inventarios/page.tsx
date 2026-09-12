@@ -21,7 +21,7 @@ export default async function InventariosPage() {
     <AppShell session={session}>
       <header className="mb-8 flex items-center justify-between">
         <div>
-          <p className="font-mono text-xs text-ardosia-600">09 · INVENTÁRIO</p>
+          <p className="font-mono text-xs text-ardosia-600">07 · INVENTÁRIO</p>
           <h1 className="font-display text-2xl font-medium mt-1">Inventários</h1>
         </div>
         <Link

@@ -44,6 +44,21 @@ model Cliente {
   presencasCarga   PresencaCarga[]
   movimentosPallet MovimentoPallet[]
   inventarios      Inventario[]
+  produtos         Produto[]
+}
+
+// Cadastro de produtos por cliente (código + descrição) — base pra busca/autocomplete
+model Produto {
+  id         String   @id @default(cuid())
+  cliente    Cliente  @relation(fields: [clienteId], references: [id])
+  clienteId  String
+
+  codigo     String
+  descricao  String
+  ativo      Boolean  @default(true)
+  criadoEm   DateTime @default(now())
+
+  @@unique([clienteId, codigo])
 }
 
 // Controle diário de processos (chegada -> liberação -> operação)

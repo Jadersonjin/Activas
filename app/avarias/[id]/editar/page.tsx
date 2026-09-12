@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
 import { db } from "@/lib/db";
 import { atualizarAvaria } from "@/lib/actions/avarias";
+import { AvariaProdutoFields } from "@/components/AvariaProdutoFields";
 
 export default async function EditarAvariaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -49,46 +50,17 @@ export default async function EditarAvariaPage({ params }: { params: Promise<{ i
           </div>
         </div>
 
+        <AvariaProdutoFields
+          clientes={clientes}
+          clienteIdInicial={avaria.clienteId}
+          codigoInicial={avaria.codigoProduto}
+          descricaoInicial={avaria.descricao}
+        />
         <div>
-          <label className="block text-xs text-ardosia-600 mb-1">Cliente</label>
-          <select
-            name="clienteId"
-            defaultValue={avaria.clienteId}
-            required
-            className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
-          >
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nome}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-ardosia-600 mb-1">Código do produto</label>
-            <input
-              name="codigoProduto"
-              defaultValue={avaria.codigoProduto}
-              required
-              className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-ardosia-600 mb-1">Lote</label>
-            <input
-              name="lote"
-              defaultValue={avaria.lote || ""}
-              className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs text-ardosia-600 mb-1">Descrição do produto</label>
+          <label className="block text-xs text-ardosia-600 mb-1">Lote</label>
           <input
-            name="descricao"
-            defaultValue={avaria.descricao}
-            required
+            name="lote"
+            defaultValue={avaria.lote || ""}
             className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
           />
         </div>

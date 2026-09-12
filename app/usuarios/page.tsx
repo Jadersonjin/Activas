@@ -15,7 +15,7 @@ export default async function UsuariosPage() {
   return (
     <AppShell session={session}>
       <header className="mb-8">
-        <p className="font-mono text-xs text-ardosia-600">09 · USUÁRIOS</p>
+        <p className="font-mono text-xs text-ardosia-600">10 · USUÁRIOS</p>
         <h1 className="font-display text-2xl font-medium mt-1">Usuários da equipe</h1>
         <p className="text-sm text-ardosia-500 mt-1">
           Só administradores acessam essa tela. Esqueceu a senha? Um admin reseta aqui.
@@ -24,7 +24,7 @@ export default async function UsuariosPage() {
 
       <section className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
         <div className="border border-ardosia-200 rounded-sm bg-white overflow-x-auto">
-  <table className="w-full text-sm min-w-[720px]">
+          <table className="w-full text-sm min-w-[720px]">
             <thead>
               <tr className="bg-ardosia-100 text-left text-xs text-ardosia-600 uppercase tracking-wide">
                 <th className="px-4 py-3 font-normal">Nome</th>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ProdutoAutocomplete } from "@/components/ProdutoAutocomplete";
 
 type Cliente = { id: string; nome: string };
 type ItemExistente = { codigoProduto: string; descricao: string; quantidade: string; unidade: string };
@@ -24,6 +25,7 @@ export function EditarPresencaCargaForm({
   observacao: string;
   itensIniciais: ItemExistente[];
 }) {
+  const [clienteId, setClienteId] = useState(clienteIdInicial);
   const [itens, setItens] = useState<ItemExistente[]>(
     itensIniciais.length > 0 ? itensIniciais : [{ codigoProduto: "", descricao: "", quantidade: "", unidade: "UN" }]
   );
@@ -42,7 +44,8 @@ export function EditarPresencaCargaForm({
         <label className="block text-xs text-ardosia-600 mb-1">Cliente</label>
         <select
           name="clienteId"
-          defaultValue={clienteIdInicial}
+          value={clienteId}
+          onChange={(e) => setClienteId(e.target.value)}
           required
           className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
         >
@@ -98,19 +101,12 @@ export function EditarPresencaCargaForm({
                 </button>
               )}
               <p className="text-[11px] text-ardosia-400">Produto {idx + 1}</p>
-              <input
-                name="itemCodigoProduto"
-                placeholder="Código do produto"
-                defaultValue={item.codigoProduto}
-                required
-                className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
-              />
-              <input
-                name="itemDescricao"
-                placeholder="Descrição"
-                defaultValue={item.descricao}
-                required
-                className="w-full border border-ardosia-200 rounded-sm px-3 py-1.5 text-sm outline-none focus:border-ambar-500"
+              <ProdutoAutocomplete
+                clienteId={clienteId}
+                nomeCodigo="itemCodigoProduto"
+                nomeDescricao="itemDescricao"
+                codigoInicial={item.codigoProduto}
+                descricaoInicial={item.descricao}
               />
               <div className="grid grid-cols-2 gap-2">
                 <input

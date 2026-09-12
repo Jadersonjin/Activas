@@ -42,7 +42,7 @@ export default async function RelatoriosPage({
   return (
     <AppShell session={session}>
       <header className="mb-8">
-        <p className="font-mono text-xs text-ardosia-600">07 · RELATÓRIOS</p>
+        <p className="font-mono text-xs text-ardosia-600">08 · RELATÓRIOS</p>
         <h1 className="font-display text-2xl font-medium mt-1">Relatórios</h1>
         <p className="text-sm text-ardosia-500 mt-1">Relatório mensal de presença de carga.</p>
       </header>
