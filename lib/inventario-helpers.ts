@@ -1,6 +1,11 @@
 import { db } from "@/lib/db";
 
-export async function itensPendentes(inventarioId: string) {
+// Itens que ainda precisam de contagem NESTA rodada:
+// - nunca bateram com o esperado em nenhuma rodada anterior (não resolvidos), E
+// - ainda não foram apontados nesta rodada específica (senão o conferente ficaria
+//   vendo o mesmo item de novo até acertar — a recontagem de itens divergentes
+//   fica pra próxima rodada, não pra agora)
+export async function itensPendentes(inventarioId: string, rodadaId?: string) {
   const [itens, contagens] = await Promise.all([
     db.inventarioItemEsperado.findMany({ where: { inventarioId } }),
     db.inventarioContagem.findMany({
@@ -15,5 +20,9 @@ export async function itensPendentes(inventarioId: string) {
       .map((c) => c.itemEsperadoId)
   );
 
-  return itens.filter((item) => !resolvidos.has(item.id));
+  const jaContadosNestaRodada = new Set(
+    rodadaId ? contagens.filter((c) => c.rodadaId === rodadaId).map((c) => c.itemEsperadoId) : []
+  );
+
+  return itens.filter((item) => !resolvidos.has(item.id) && !jaContadosNestaRodada.has(item.id));
 }

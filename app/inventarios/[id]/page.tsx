@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
+import { InventarioResumoReport } from "@/components/InventarioResumoReport";
 import { db } from "@/lib/db";
 import { fmtData, fmtDataHora } from "@/lib/br-date";
 import {
@@ -48,23 +49,36 @@ export default async function InventarioDetalhePage({ params }: { params: Promis
   }
 
   const rodadaAtiva = inventario.rodadas.find((r) => r.status === "ABERTA");
-  const totalPendentes = inventario.itens.filter(
-    (item) => statusItem(item.id, Number(item.quantidadeEsperada)) !== "OK"
-  ).length;
+
+  const totalItens = inventario.itens.length;
+  let okCount = 0;
+  let divergenteCount = 0;
+  let pendenteCount = 0;
+  let avulsoCount = 0;
+  for (const item of inventario.itens) {
+    const s = statusItem(item.id, Number(item.quantidadeEsperada));
+    if (s === "OK") okCount++;
+    else if (s === "DIVERGENTE") divergenteCount++;
+    else pendenteCount++;
+    if (item.avulso) avulsoCount++;
+  }
+  const percentual = totalItens > 0 ? Math.round((okCount / totalItens) * 100) : 0;
+  const totalPendentes = divergenteCount + pendenteCount;
 
   return (
     <AppShell session={session}>
-      <header className="mb-8 flex items-start justify-between flex-wrap gap-3">
+      <header className="mb-6 flex items-start justify-between flex-wrap gap-3">
         <div>
           <p className="font-mono text-xs text-ardosia-600">07 · INVENTÁRIO</p>
           <h1 className="font-display text-2xl font-medium mt-1">{inventario.nome}</h1>
           <p className="text-sm text-ardosia-500 mt-1">
-            {inventario.cliente.nome} · {inventario.itens.length} itens ·{" "}
+            {inventario.cliente.nome} · {totalItens} itens ·{" "}
             {inventario.status === "PREPARANDO"
               ? "Preparando"
               : inventario.status === "EM_CONTAGEM"
               ? `Em contagem (rodada ${rodadaAtiva?.numero})`
               : "Finalizado"}
+            {inventario.status !== "PREPARANDO" ? ` · ${percentual}% conferido` : ""}
           </p>
         </div>
 
@@ -94,10 +108,28 @@ export default async function InventarioDetalhePage({ params }: { params: Promis
         </div>
       </header>
 
-      <div className="border border-ardosia-200 rounded-sm bg-white overflow-hidden">
-        <table className="w-full text-sm">
+      {inventario.status !== "PREPARANDO" && (
+        <div className="mb-8 border border-ardosia-200 rounded-sm bg-white p-4">
+          <div className="flex items-end justify-between mb-1">
+            <p className="text-xs text-ardosia-500">Progresso da contagem</p>
+            <p className="font-display text-xl font-bold">{percentual}%</p>
+          </div>
+          <div className="w-full h-2.5 bg-ardosia-100 rounded-full overflow-hidden">
+            <div className="h-full bg-verde-500" style={{ width: `${percentual}%` }} />
+          </div>
+          <p className="text-xs text-ardosia-500 mt-2">
+            {okCount} conferidos · {divergenteCount} divergentes · {pendenteCount} pendentes
+            {avulsoCount > 0 ? ` · ${avulsoCount} avulso(s)` : ""} de {totalItens}
+          </p>
+        </div>
+      )}
+
+      <div className="border border-ardosia-200 rounded-sm bg-white overflow-x-auto">
+        <table className="w-full text-sm min-w-[900px]">
           <thead>
             <tr className="bg-ardosia-100 text-left text-xs text-ardosia-600 uppercase tracking-wide">
+              <th className="px-4 py-2 font-normal">Armazém</th>
+              <th className="px-4 py-2 font-normal">Código</th>
               <th className="px-4 py-2 font-normal">Descrição</th>
               <th className="px-4 py-2 font-normal">Lote</th>
               <th className="px-4 py-2 font-normal">Esperado</th>
@@ -124,7 +156,16 @@ export default async function InventarioDetalhePage({ params }: { params: Promis
                       : "border-t border-ardosia-100"
                   }
                 >
-                  <td className="px-4 py-2">{item.descricao}</td>
+                  <td className="px-4 py-2 text-xs">{item.armazem || "—"}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{item.codigoProduto || "—"}</td>
+                  <td className="px-4 py-2">
+                    {item.descricao}
+                    {item.avulso && (
+                      <span className="ml-2 text-[10px] text-ambar-600 bg-ambar-500/10 px-1.5 py-0.5 rounded-sm">
+                        avulso
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-2 font-mono text-xs">{item.lote}</td>
                   <td className="px-4 py-2 font-mono">{item.quantidadeEsperada.toString()}</td>
                   <td className="px-4 py-2 font-mono">{ultima ? ultima.quantidadeContada.toString() : "—"}</td>
@@ -178,6 +219,28 @@ export default async function InventarioDetalhePage({ params }: { params: Promis
           </tbody>
         </table>
       </div>
+
+      {inventario.status !== "PREPARANDO" && (
+        <details className="mt-8 border border-ardosia-200 rounded-sm bg-white p-5">
+          <summary className="font-display text-sm font-medium cursor-pointer">
+            Resumo pra enviar ao gerente
+          </summary>
+          <div className="mt-4">
+            <InventarioResumoReport
+              nomeInventario={inventario.nome}
+              nomeCliente={inventario.cliente.nome}
+              total={totalItens}
+              ok={okCount}
+              divergente={divergenteCount}
+              pendente={pendenteCount}
+              avulso={avulsoCount}
+              percentual={percentual}
+              geradoEm={fmtDataHora(new Date())}
+              nomeArquivo={`inventario-${inventario.nome.toLowerCase().replace(/\s+/g, "-")}-resumo.pdf`}
+            />
+          </div>
+        </details>
+      )}
 
       {contagens.length > 0 && (
         <div className="mt-8 border border-ardosia-200 rounded-sm bg-white p-5">

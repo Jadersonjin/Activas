@@ -8,7 +8,7 @@ const SECRET = process.env.SESSION_SECRET || "troque-este-segredo-em-producao";
 export type SessionPayload = {
   userId: string;
   nome: string;
-  email: string;
+  login: string;
   papel: "ADMIN" | "OPERADOR" | "CONFERENTE";
 };
 

@@ -18,25 +18,25 @@ export async function criarUsuario(formData: FormData) {
   await exigirAdmin();
 
   const nome = String(formData.get("nome") || "").trim();
-  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const login = String(formData.get("login") || "").trim().toLowerCase();
   const senha = String(formData.get("senha") || "");
   const papelRaw = String(formData.get("papel") || "OPERADOR");
   const papel: "ADMIN" | "OPERADOR" | "CONFERENTE" = ["ADMIN", "CONFERENTE"].includes(papelRaw)
     ? (papelRaw as "ADMIN" | "CONFERENTE")
     : "OPERADOR";
 
-  if (!nome || !email || senha.length < 6) return;
+  if (!nome || !login || senha.length < 6) return;
 
-  const existente = await db.usuario.findUnique({ where: { email } });
+  const existente = await db.usuario.findUnique({ where: { login } });
   if (existente) return;
 
   const senhaHash = await bcrypt.hash(senha, 10);
   const usuario = await db.usuario.create({
-    data: { nome, email, senhaHash, papel },
+    data: { nome, login, senhaHash, papel },
   });
 
   const labelPapel = papel === "ADMIN" ? "Administrador" : papel === "CONFERENTE" ? "Conferente" : "Operador";
-  await registrarLog("Usuario", usuario.id, "CRIAR", `Usuário "${nome}" (${email}) criado como ${labelPapel}`);
+  await registrarLog("Usuario", usuario.id, "CRIAR", `Usuário "${nome}" (login: ${login}) criado como ${labelPapel}`);
   revalidatePath("/usuarios");
 }
 

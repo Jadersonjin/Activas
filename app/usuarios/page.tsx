@@ -28,7 +28,7 @@ export default async function UsuariosPage() {
             <thead>
               <tr className="bg-ardosia-100 text-left text-xs text-ardosia-600 uppercase tracking-wide">
                 <th className="px-4 py-3 font-normal">Nome</th>
-                <th className="px-4 py-3 font-normal">E-mail</th>
+                <th className="px-4 py-3 font-normal">Login</th>
                 <th className="px-4 py-3 font-normal">Papel</th>
                 <th className="px-4 py-3 font-normal">Status</th>
                 <th className="px-4 py-3 font-normal">Resetar senha</th>
@@ -42,7 +42,7 @@ export default async function UsuariosPage() {
                 return (
                   <tr key={u.id} className="border-t border-ardosia-100 align-top">
                     <td className="px-4 py-3">{u.nome}</td>
-                    <td className="px-4 py-3 text-ardosia-600">{u.email}</td>
+                    <td className="px-4 py-3 text-ardosia-600 font-mono text-xs">{u.login}</td>
                     <td className="px-4 py-3 text-xs">
                       {u.papel === "ADMIN" ? "Administrador" : u.papel === "CONFERENTE" ? "Conferente" : "Operador"}
                     </td>
@@ -91,10 +91,11 @@ export default async function UsuariosPage() {
             />
           </div>
           <div>
-            <label className="block text-xs text-ardosia-600 mb-1">E-mail</label>
+            <label className="block text-xs text-ardosia-600 mb-1">Login</label>
             <input
-              name="email"
-              type="email"
+              name="login"
+              type="text"
+              autoCapitalize="none"
               required
               className="w-full border border-ardosia-200 rounded-sm px-3 py-2 text-sm outline-none focus:border-ambar-500"
             />

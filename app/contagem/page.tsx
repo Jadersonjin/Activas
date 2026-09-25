@@ -22,8 +22,8 @@ export default async function ContagemPage({
     inventariosAtivos.find((i) => i.id === inventarioId) ||
     (inventariosAtivos.length === 1 ? inventariosAtivos[0] : null);
 
-  const pendentes = inventarioAtual ? await itensPendentes(inventarioAtual.id) : [];
   const rodadaAtiva = inventarioAtual?.rodadas[0];
+  const pendentes = inventarioAtual && rodadaAtiva ? await itensPendentes(inventarioAtual.id, rodadaAtiva.id) : [];
 
   return (
     <div className="min-h-screen bg-ardosia-50">
@@ -65,7 +65,7 @@ export default async function ContagemPage({
             <div className="mb-4">
               <p className="font-display text-lg font-medium">{inventarioAtual.nome}</p>
               <p className="text-xs text-ardosia-500">
-                {inventarioAtual.cliente.nome} · Rodada {rodadaAtiva.numero} · {pendentes.length} pendente(s)
+                {inventarioAtual.cliente.nome} · Rodada {rodadaAtiva.numero} · {pendentes.length} pendente(s) nesta rodada
               </p>
               {inventariosAtivos.length > 1 && (
                 <a href="/contagem" className="text-[11px] text-ardosia-400 hover:text-ambar-600">
@@ -75,11 +75,14 @@ export default async function ContagemPage({
             </div>
             <ContagemForm
               rodadaId={rodadaAtiva.id}
+              inventarioId={inventarioAtual.id}
               itens={pendentes.map((p) => ({
                 id: p.id,
                 descricao: p.descricao,
                 lote: p.lote,
                 quantidadeEsperada: p.quantidadeEsperada.toString(),
+                armazem: p.armazem,
+                codigoProduto: p.codigoProduto,
               }))}
             />
           </>

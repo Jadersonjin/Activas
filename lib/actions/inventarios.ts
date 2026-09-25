@@ -39,24 +39,35 @@ export async function criarInventario(
   sheet.getRow(1).eachCell((cell, colNumber) => {
     cabecalho.set(normalizar(cell.value).toLowerCase(), colNumber);
   });
+  const idxArmazem = cabecalho.get("armazém") || cabecalho.get("armazem");
+  const idxCodigo = cabecalho.get("produto") || cabecalho.get("código") || cabecalho.get("codigo");
   const idxDescricao = cabecalho.get("descrição") || cabecalho.get("descricao");
   const idxLote = cabecalho.get("lote");
   const idxQtd = cabecalho.get("quantidade") || cabecalho.get("qtd") || cabecalho.get("saldo");
 
-  if (!idxDescricao || !idxLote || !idxQtd) {
+  if (!idxCodigo || !idxDescricao || !idxLote || !idxQtd) {
     return {
-      erro: "A planilha precisa ter as colunas: Descrição, Lote e Quantidade (nesses nomes, em qualquer ordem).",
+      erro:
+        "A planilha precisa ter as colunas: Armazém, Produto, Descrição, Lote e Quantidade (nesses nomes, em qualquer ordem — Armazém é opcional).",
     };
   }
 
-  const itens: { descricao: string; lote: string; quantidadeEsperada: number }[] = [];
+  const itens: {
+    armazem: string | null;
+    codigoProduto: string;
+    descricao: string;
+    lote: string;
+    quantidadeEsperada: number;
+  }[] = [];
   for (let i = 2; i <= sheet.rowCount; i++) {
     const row = sheet.getRow(i);
+    const armazem = idxArmazem ? normalizar(row.getCell(idxArmazem).value) || null : null;
+    const codigoProduto = normalizar(row.getCell(idxCodigo).value);
     const descricao = normalizar(row.getCell(idxDescricao).value);
     const lote = normalizar(row.getCell(idxLote).value);
     const quantidadeEsperada = Number(row.getCell(idxQtd).value) || 0;
     if (!descricao || !lote) continue;
-    itens.push({ descricao, lote, quantidadeEsperada });
+    itens.push({ armazem, codigoProduto, descricao, lote, quantidadeEsperada });
   }
 
   if (itens.length === 0) return { erro: "Não encontrei nenhuma linha válida na planilha." };
@@ -137,6 +148,59 @@ export async function registrarContagem(
     bateu: quantidadeContada === Number(item.quantidadeEsperada),
     ultimoItem: `${item.descricao} (lote ${item.lote})`,
   };
+}
+
+// Item que o conferente encontrou fisicamente mas que não estava na planilha original
+export async function registrarItemAvulso(
+  _prevState: { erro?: string; sucesso?: boolean; ultimoItem?: string } | undefined,
+  formData: FormData
+) {
+  const session = await getSession();
+  const rodadaId = String(formData.get("rodadaId") || "");
+  const inventarioId = String(formData.get("inventarioId") || "");
+  const armazem = String(formData.get("armazem") || "").trim() || null;
+  const codigoProduto = String(formData.get("codigoProduto") || "").trim();
+  const descricao = String(formData.get("descricao") || "").trim();
+  const lote = String(formData.get("lote") || "").trim();
+  const quantidade = Number(formData.get("quantidade") || 0);
+  const localizacao = String(formData.get("localizacao") || "").trim() || null;
+
+  if (!rodadaId || !inventarioId) return { erro: "Inventário/rodada inválidos." };
+  if (!descricao || !lote || !quantidade) return { erro: "Preencha descrição, lote e quantidade." };
+  if (!localizacao) return { erro: "Informe a localização onde encontrou o item." };
+
+  const item = await db.inventarioItemEsperado.create({
+    data: {
+      inventarioId,
+      armazem,
+      codigoProduto,
+      descricao,
+      lote,
+      quantidadeEsperada: quantidade,
+      avulso: true,
+    },
+  });
+
+  await db.inventarioContagem.create({
+    data: {
+      rodadaId,
+      itemEsperadoId: item.id,
+      quantidadeContada: quantidade,
+      localizacao,
+      conferenteNome: session?.nome || "Conferente",
+      conferenteId: session?.userId,
+    },
+  });
+
+  await registrarLog(
+    "Inventario",
+    inventarioId,
+    "CRIAR",
+    `Item avulso encontrado — ${descricao} (lote ${lote}), não estava na planilha original`
+  );
+
+  revalidatePath("/contagem");
+  return { sucesso: true, ultimoItem: `${descricao} (lote ${lote}) — item avulso registrado` };
 }
 
 export async function fecharRodada(rodadaId: string) {

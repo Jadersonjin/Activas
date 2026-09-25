@@ -7,15 +7,15 @@ import { createSessionCookie, clearSessionCookie, getSession } from "@/lib/sessi
 import { registrarLog } from "@/lib/log";
 
 export async function login(_prevState: { erro?: string } | undefined, formData: FormData) {
-  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const login = String(formData.get("login") || "").trim().toLowerCase();
   const senha = String(formData.get("senha") || "");
   const next = String(formData.get("next") || "/dashboard");
 
-  if (!email || !senha) {
-    return { erro: "Informe e-mail e senha." };
+  if (!login || !senha) {
+    return { erro: "Informe login e senha." };
   }
 
-  const usuario = await db.usuario.findUnique({ where: { email } });
+  const usuario = await db.usuario.findUnique({ where: { login } });
   if (!usuario || !usuario.ativo) {
     return { erro: "Usuário não encontrado ou inativo." };
   }
@@ -28,7 +28,7 @@ export async function login(_prevState: { erro?: string } | undefined, formData:
   await createSessionCookie({
     userId: usuario.id,
     nome: usuario.nome,
-    email: usuario.email,
+    login: usuario.login,
     papel: usuario.papel,
   });
 

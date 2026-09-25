@@ -13,11 +13,12 @@ export function LoginForm() {
     <form action={formAction} className="bg-ardosia-900 border border-ardosia-800 rounded-sm p-6 space-y-4">
       <input type="hidden" name="next" value={next} />
       <div>
-        <label className="block text-xs text-ardosia-400 mb-1">E-mail</label>
+        <label className="block text-xs text-ardosia-400 mb-1">Login</label>
         <input
-          name="email"
-          type="email"
+          name="login"
+          type="text"
           required
+          autoCapitalize="none"
           className="w-full bg-ardosia-800 border border-ardosia-700 rounded-sm px-3 py-2 text-sm text-ardosia-50 outline-none focus:border-ambar-500"
         />
       </div>

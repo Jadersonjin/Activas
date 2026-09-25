@@ -31,6 +31,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const sheet = workbook.addWorksheet("Inventário");
 
   sheet.columns = [
+    { header: "Armazém", key: "armazem", width: 14 },
+    { header: "Código", key: "codigo", width: 14 },
     { header: "Descrição", key: "descricao", width: 32 },
     { header: "Lote", key: "lote", width: 16 },
     { header: "Esperado", key: "esperado", width: 12 },
@@ -38,6 +40,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     { header: "Diferença", key: "diferenca", width: 12 },
     { header: "Localização", key: "localizacao", width: 16 },
     { header: "Status", key: "status", width: 14 },
+    { header: "Avulso", key: "avulso", width: 10 },
     { header: "Observação", key: "observacao", width: 32 },
   ];
   sheet.getRow(1).font = { bold: true };
@@ -50,6 +53,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const contado = ultima ? Number(ultima.quantidadeContada) : null;
 
     sheet.addRow({
+      armazem: item.armazem || "",
+      codigo: item.codigoProduto || "",
       descricao: item.descricao,
       lote: item.lote,
       esperado,
@@ -57,6 +62,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       diferenca: contado !== null ? contado - esperado : "",
       localizacao: ultima?.localizacao || "",
       status: !ultima ? "Pendente" : bateu ? "OK" : "Divergente",
+      avulso: item.avulso ? "Sim" : "",
       observacao: item.tipoObservacao
         ? `${LABEL_OBSERVACAO[item.tipoObservacao] || item.tipoObservacao}${item.observacao ? ` — ${item.observacao}` : ""}`
         : item.observacao || "",

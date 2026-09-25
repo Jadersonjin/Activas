@@ -21,7 +21,8 @@ enum Papel {
 model Usuario {
   id        String   @id @default(cuid())
   nome      String
-  email     String   @unique
+  login     String   @unique
+  email     String?
   senhaHash String
   papel     Papel    @default(OPERADOR)
   ativo     Boolean  @default(true)
@@ -204,9 +205,12 @@ model InventarioItemEsperado {
   inventario     Inventario @relation(fields: [inventarioId], references: [id], onDelete: Cascade)
   inventarioId   String
 
+  armazem        String?
+  codigoProduto  String   @default("")
   descricao      String
   lote           String
   quantidadeEsperada Decimal
+  avulso         Boolean  @default(false) // item encontrado fisicamente mas que não estava na planilha original
 
   // Observação prévia (tipo Radar), marcada pelo admin antes de liberar pro conferente
   tipoObservacao String?  // JA_TRATADO, TRATATIVA_ADMINISTRATIVA, OUTRO
