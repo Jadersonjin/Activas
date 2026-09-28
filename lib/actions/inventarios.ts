@@ -40,6 +40,7 @@ export async function criarInventario(
     cabecalho.set(normalizar(cell.value).toLowerCase(), colNumber);
   });
   const idxArmazem = cabecalho.get("armazém") || cabecalho.get("armazem");
+  const idxPosicao = cabecalho.get("posição") || cabecalho.get("posicao") || cabecalho.get("rua") || cabecalho.get("endereço") || cabecalho.get("endereco");
   const idxCodigo = cabecalho.get("produto") || cabecalho.get("código") || cabecalho.get("codigo");
   const idxDescricao = cabecalho.get("descrição") || cabecalho.get("descricao");
   const idxLote = cabecalho.get("lote");
@@ -48,12 +49,13 @@ export async function criarInventario(
   if (!idxCodigo || !idxDescricao || !idxLote || !idxQtd) {
     return {
       erro:
-        "A planilha precisa ter as colunas: Armazém, Produto, Descrição, Lote e Quantidade (nesses nomes, em qualquer ordem — Armazém é opcional).",
+        "A planilha precisa ter as colunas: Armazém, Produto, Descrição, Lote e Quantidade (nesses nomes, em qualquer ordem — Armazém e Posição são opcionais).",
     };
   }
 
   const itens: {
     armazem: string | null;
+    posicao: string | null;
     codigoProduto: string;
     descricao: string;
     lote: string;
@@ -62,12 +64,13 @@ export async function criarInventario(
   for (let i = 2; i <= sheet.rowCount; i++) {
     const row = sheet.getRow(i);
     const armazem = idxArmazem ? normalizar(row.getCell(idxArmazem).value) || null : null;
+    const posicao = idxPosicao ? normalizar(row.getCell(idxPosicao).value) || null : null;
     const codigoProduto = normalizar(row.getCell(idxCodigo).value);
     const descricao = normalizar(row.getCell(idxDescricao).value);
     const lote = normalizar(row.getCell(idxLote).value);
     const quantidadeEsperada = Number(row.getCell(idxQtd).value) || 0;
     if (!descricao || !lote) continue;
-    itens.push({ armazem, codigoProduto, descricao, lote, quantidadeEsperada });
+    itens.push({ armazem, posicao, codigoProduto, descricao, lote, quantidadeEsperada });
   }
 
   if (itens.length === 0) return { erro: "Não encontrei nenhuma linha válida na planilha." };
@@ -146,7 +149,7 @@ export async function registrarContagem(
   return {
     sucesso: true,
     bateu: quantidadeContada === Number(item.quantidadeEsperada),
-    ultimoItem: `${item.descricao} (lote ${item.lote})`,
+    ultimoItem: `${item.descricao} (lote ${item.lote}${item.posicao ? ` · ${item.posicao}` : ""})`,
   };
 }
 
@@ -159,6 +162,7 @@ export async function registrarItemAvulso(
   const rodadaId = String(formData.get("rodadaId") || "");
   const inventarioId = String(formData.get("inventarioId") || "");
   const armazem = String(formData.get("armazem") || "").trim() || null;
+  const posicao = String(formData.get("posicao") || "").trim() || null;
   const codigoProduto = String(formData.get("codigoProduto") || "").trim();
   const descricao = String(formData.get("descricao") || "").trim();
   const lote = String(formData.get("lote") || "").trim();
@@ -173,6 +177,7 @@ export async function registrarItemAvulso(
     data: {
       inventarioId,
       armazem,
+      posicao,
       codigoProduto,
       descricao,
       lote,
@@ -227,22 +232,48 @@ export async function fecharRodada(rodadaId: string) {
   if (pendentes.length === 0) {
     await db.$transaction([
       db.inventarioRodada.update({ where: { id: rodadaId }, data: { status: "FECHADA", fechadaEm: new Date() } }),
-      db.inventario.update({ where: { id: rodada.inventarioId }, data: { status: "FINALIZADO" } }),
+      db.inventario.update({ where: { id: rodada.inventarioId }, data: { status: "FINALIZADO", finalizadoEm: new Date() } }),
     ]);
     await registrarLog("Inventario", rodada.inventarioId, "EDITAR", `Inventário "${rodada.inventario.nome}" finalizado — tudo conferido`);
   } else {
+    // A próxima rodada NÃO abre sozinha: o administrativo investiga as divergências
+    // e libera a recontagem manualmente (liberarProximaRodada)
     await db.$transaction([
       db.inventarioRodada.update({ where: { id: rodadaId }, data: { status: "FECHADA", fechadaEm: new Date() } }),
-      db.inventarioRodada.create({ data: { inventarioId: rodada.inventarioId, numero: rodada.numero + 1 } }),
+      db.inventario.update({ where: { id: rodada.inventarioId }, data: { status: "AGUARDANDO_LIBERACAO" } }),
     ]);
     await registrarLog(
       "Inventario",
       rodada.inventarioId,
       "EDITAR",
-      `Rodada ${rodada.numero} fechada — ${pendentes.length} item(ns) foram pra recontagem (rodada ${rodada.numero + 1})`
+      `Rodada ${rodada.numero} concluída — ${pendentes.length} item(ns) divergente(s)/pendente(s) aguardando liberação da recontagem`
     );
   }
 
   revalidatePath(`/inventarios/${rodada.inventarioId}`);
+  revalidatePath("/contagem");
+}
+
+export async function liberarProximaRodada(inventarioId: string) {
+  const inventario = await db.inventario.findUniqueOrThrow({
+    where: { id: inventarioId },
+    include: { rodadas: { orderBy: { numero: "desc" }, take: 1 } },
+  });
+  if (inventario.status !== "AGUARDANDO_LIBERACAO") return;
+
+  const proximoNumero = (inventario.rodadas[0]?.numero || 0) + 1;
+
+  await db.$transaction([
+    db.inventarioRodada.create({ data: { inventarioId, numero: proximoNumero } }),
+    db.inventario.update({ where: { id: inventarioId }, data: { status: "EM_CONTAGEM" } }),
+  ]);
+
+  await registrarLog(
+    "Inventario",
+    inventarioId,
+    "EDITAR",
+    `Recontagem liberada manualmente — rodada ${proximoNumero} aberta pro conferente`
+  );
+  revalidatePath(`/inventarios/${inventarioId}`);
   revalidatePath("/contagem");
 }

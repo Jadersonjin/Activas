@@ -191,9 +191,10 @@ model Inventario {
   cliente    Cliente  @relation(fields: [clienteId], references: [id])
   clienteId  String
 
-  nome       String   // ex: "Inventário Setembro/2026"
-  status     String   @default("PREPARANDO") // PREPARANDO, EM_CONTAGEM, FINALIZADO
-  criadoEm   DateTime @default(now())
+  nome         String   // ex: "Inventário Setembro/2026"
+  status       String   @default("PREPARANDO") // PREPARANDO, EM_CONTAGEM, FINALIZADO
+  criadoEm     DateTime @default(now())
+  finalizadoEm DateTime?
 
   itens      InventarioItemEsperado[]
   rodadas    InventarioRodada[]
@@ -206,6 +207,7 @@ model InventarioItemEsperado {
   inventarioId   String
 
   armazem        String?
+  posicao        String?  // rua/endereço — o mesmo produto+lote pode existir em posições diferentes
   codigoProduto  String   @default("")
   descricao      String
   lote           String

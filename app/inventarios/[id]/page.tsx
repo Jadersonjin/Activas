@@ -2,12 +2,14 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
 import { InventarioResumoReport } from "@/components/InventarioResumoReport";
+import { Cronometro } from "@/components/Cronometro";
 import { db } from "@/lib/db";
 import { fmtData, fmtDataHora } from "@/lib/br-date";
 import {
   atualizarObservacaoItem,
   liberarInventario,
   fecharRodada,
+  liberarProximaRodada,
 } from "@/lib/actions/inventarios";
 
 const LABEL_OBSERVACAO: Record<string, string> = {
@@ -77,6 +79,8 @@ export default async function InventarioDetalhePage({ params }: { params: Promis
               ? "Preparando"
               : inventario.status === "EM_CONTAGEM"
               ? `Em contagem (rodada ${rodadaAtiva?.numero})`
+              : inventario.status === "AGUARDANDO_LIBERACAO"
+              ? "Aguardando liberação da recontagem"
               : "Finalizado"}
             {inventario.status !== "PREPARANDO" ? ` · ${percentual}% conferido` : ""}
           </p>
@@ -101,12 +105,27 @@ export default async function InventarioDetalhePage({ params }: { params: Promis
           {inventario.status === "EM_CONTAGEM" && rodadaAtiva && (
             <form action={fecharRodada.bind(null, rodadaAtiva.id)}>
               <button className="bg-ardosia-950 hover:bg-ardosia-900 text-ardosia-50 text-sm rounded-sm px-4 py-2 transition-colors whitespace-nowrap">
-                Fechar rodada {rodadaAtiva.numero} {totalPendentes > 0 ? `(${totalPendentes} vão pra recontagem)` : "(finalizar)"}
+                Concluir rodada {rodadaAtiva.numero} {totalPendentes > 0 ? `(${totalPendentes} divergente/pendente)` : "(finalizar)"}
+              </button>
+            </form>
+          )}
+
+          {inventario.status === "AGUARDANDO_LIBERACAO" && (
+            <form action={liberarProximaRodada.bind(null, inventario.id)}>
+              <button className="bg-ambar-500 hover:bg-ambar-600 text-ardosia-950 font-medium text-sm rounded-sm px-4 py-2 transition-colors whitespace-nowrap">
+                Liberar recontagem — rodada {(inventario.rodadas[inventario.rodadas.length - 1]?.numero || 0) + 1} ({totalPendentes} itens)
               </button>
             </form>
           )}
         </div>
       </header>
+
+      {inventario.status === "AGUARDANDO_LIBERACAO" && (
+        <div className="mb-6 border border-ambar-500/40 bg-ambar-500/10 rounded-sm px-4 py-3 text-sm text-ardosia-700">
+          A contagem foi concluída. Os {totalPendentes} item(ns) divergente(s)/pendente(s) estão na tabela abaixo.
+          A recontagem só abre pro conferente quando você clicar em <strong>Liberar recontagem</strong>.
+        </div>
+      )}
 
       {inventario.status !== "PREPARANDO" && (
         <div className="mb-8 border border-ardosia-200 rounded-sm bg-white p-4">
@@ -124,11 +143,41 @@ export default async function InventarioDetalhePage({ params }: { params: Promis
         </div>
       )}
 
+      {inventario.rodadas.length > 0 && (
+        <div className="mb-8 border border-ardosia-200 rounded-sm bg-white p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs text-ardosia-500">Tempo total do inventário</p>
+            <p className="font-display text-lg font-bold">
+              <Cronometro
+                inicio={inventario.rodadas[0].criadoEm.toISOString()}
+                fim={inventario.finalizadoEm?.toISOString() || null}
+              />
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            {inventario.rodadas.map((r) => (
+              <div key={r.id} className="flex items-center justify-between text-xs text-ardosia-600">
+                <span>
+                  Rodada {r.numero} — início {fmtDataHora(r.criadoEm)}
+                  {r.fechadaEm ? ` · fim ${fmtDataHora(r.fechadaEm)}` : " · em andamento"}
+                </span>
+                <Cronometro
+                  inicio={r.criadoEm.toISOString()}
+                  fim={r.fechadaEm?.toISOString() || null}
+                  className="font-mono"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="border border-ardosia-200 rounded-sm bg-white overflow-x-auto">
-        <table className="w-full text-sm min-w-[900px]">
+        <table className="w-full text-sm min-w-[1000px]">
           <thead>
             <tr className="bg-ardosia-100 text-left text-xs text-ardosia-600 uppercase tracking-wide">
               <th className="px-4 py-2 font-normal">Armazém</th>
+              <th className="px-4 py-2 font-normal">Posição</th>
               <th className="px-4 py-2 font-normal">Código</th>
               <th className="px-4 py-2 font-normal">Descrição</th>
               <th className="px-4 py-2 font-normal">Lote</th>
@@ -157,6 +206,7 @@ export default async function InventarioDetalhePage({ params }: { params: Promis
                   }
                 >
                   <td className="px-4 py-2 text-xs">{item.armazem || "—"}</td>
+                  <td className="px-4 py-2 text-xs font-medium">{item.posicao || "—"}</td>
                   <td className="px-4 py-2 font-mono text-xs">{item.codigoProduto || "—"}</td>
                   <td className="px-4 py-2">
                     {item.descricao}

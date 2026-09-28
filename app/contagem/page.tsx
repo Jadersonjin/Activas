@@ -2,6 +2,8 @@ import { logout } from "@/lib/actions/auth";
 import { getSession } from "@/lib/session";
 import { BrasmegLogo } from "@/components/BrasmegLogo";
 import { ContagemForm } from "@/components/ContagemForm";
+import { ConcluirContagemButton } from "@/components/ConcluirContagemButton";
+import { Cronometro } from "@/components/Cronometro";
 import { db } from "@/lib/db";
 import { itensPendentes } from "@/lib/inventario-helpers";
 
@@ -17,6 +19,8 @@ export default async function ContagemPage({
     where: { status: "EM_CONTAGEM" },
     include: { cliente: true, rodadas: { where: { status: "ABERTA" } } },
   });
+
+  const aguardandoLiberacao = await db.inventario.count({ where: { status: "AGUARDANDO_LIBERACAO" } });
 
   const inventarioAtual =
     inventariosAtivos.find((i) => i.id === inventarioId) ||
@@ -40,7 +44,9 @@ export default async function ContagemPage({
       <main className="max-w-md mx-auto px-4 py-6">
         {inventariosAtivos.length === 0 && (
           <p className="text-center text-sm text-ardosia-400 py-12">
-            Nenhum inventário em contagem no momento.
+            {aguardandoLiberacao > 0
+              ? "Contagem concluída. Aguarde a liberação da recontagem pelo administrativo."
+              : "Nenhum inventário em contagem no momento."}
           </p>
         )}
 
@@ -67,6 +73,10 @@ export default async function ContagemPage({
               <p className="text-xs text-ardosia-500">
                 {inventarioAtual.cliente.nome} · Rodada {rodadaAtiva.numero} · {pendentes.length} pendente(s) nesta rodada
               </p>
+              <p className="text-xs text-ardosia-500 mt-1">
+                Tempo desta rodada:{" "}
+                <Cronometro inicio={rodadaAtiva.criadoEm.toISOString()} className="font-mono font-medium text-ardosia-700" />
+              </p>
               {inventariosAtivos.length > 1 && (
                 <a href="/contagem" className="text-[11px] text-ardosia-400 hover:text-ambar-600">
                   ← trocar inventário
@@ -82,9 +92,13 @@ export default async function ContagemPage({
                 lote: p.lote,
                 quantidadeEsperada: p.quantidadeEsperada.toString(),
                 armazem: p.armazem,
+                posicao: p.posicao,
                 codigoProduto: p.codigoProduto,
               }))}
             />
+            <div className="mt-6 pt-4 border-t border-ardosia-200">
+              <ConcluirContagemButton rodadaId={rodadaAtiva.id} />
+            </div>
           </>
         )}
       </main>

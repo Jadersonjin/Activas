@@ -7,6 +7,7 @@ import { fmtData } from "@/lib/br-date";
 function labelStatus(s: string) {
   if (s === "PREPARANDO") return { texto: "Preparando", cor: "text-ardosia-500" };
   if (s === "EM_CONTAGEM") return { texto: "Em contagem", cor: "text-ambar-600" };
+  if (s === "AGUARDANDO_LIBERACAO") return { texto: "Aguardando liberação", cor: "text-vermelho-500" };
   return { texto: "Finalizado", cor: "text-verde-500" };
 }
 

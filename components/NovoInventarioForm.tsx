@@ -44,9 +44,11 @@ export function NovoInventarioForm({ clientes }: { clientes: Cliente[] }) {
           className="w-full text-sm border border-ardosia-200 rounded-sm px-3 py-2 outline-none focus:border-ambar-500 bg-ardosia-50"
         />
         <p className="text-[11px] text-ardosia-500 mt-1">
-          A planilha precisa ter as colunas <strong>Armazém</strong>, <strong>Produto</strong>,{" "}
-          <strong>Descrição</strong>, <strong>Lote</strong> e <strong>Quantidade</strong> (nessa ordem
-          ou não, o sistema encontra pelos nomes).
+          A planilha precisa ter as colunas <strong>Produto</strong>, <strong>Descrição</strong>,{" "}
+          <strong>Lote</strong> e <strong>Quantidade</strong> (nessa ordem ou não, o sistema encontra
+          pelos nomes). <strong>Armazém</strong> e <strong>Posição</strong> são opcionais, mas se o
+          mesmo produto/lote existir em mais de uma posição (ex: Rua A e Rua B), a coluna Posição é o
+          que permite contar cada uma separadamente.
         </p>
       </div>
       {state?.erro && <p className="text-sm text-vermelho-500">{state.erro}</p>}

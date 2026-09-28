@@ -32,6 +32,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   sheet.columns = [
     { header: "Armazém", key: "armazem", width: 14 },
+    { header: "Posição", key: "posicao", width: 14 },
     { header: "Código", key: "codigo", width: 14 },
     { header: "Descrição", key: "descricao", width: 32 },
     { header: "Lote", key: "lote", width: 16 },
@@ -54,6 +55,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     sheet.addRow({
       armazem: item.armazem || "",
+      posicao: item.posicao || "",
       codigo: item.codigoProduto || "",
       descricao: item.descricao,
       lote: item.lote,

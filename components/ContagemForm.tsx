@@ -9,6 +9,7 @@ type ItemPendente = {
   lote: string;
   quantidadeEsperada: string;
   armazem?: string | null;
+  posicao?: string | null;
   codigoProduto?: string | null;
 };
 
@@ -50,25 +51,19 @@ export function ContagemForm({
         (i) =>
           i.descricao.toLowerCase().includes(termo) ||
           i.lote.toLowerCase().includes(termo) ||
-          (i.codigoProduto || "").toLowerCase().includes(termo)
+          (i.codigoProduto || "").toLowerCase().includes(termo) ||
+          (i.posicao || "").toLowerCase().includes(termo)
       )
       .slice(0, 30);
   }, [busca, itens]);
 
-  const ultimaMensagem = state?.sucesso ? state : stateAvulso?.sucesso ? { bateu: true, ultimoItem: stateAvulso.ultimoItem } : null;
+  const ultimoItemContado = state?.sucesso ? state.ultimoItem : stateAvulso?.sucesso ? stateAvulso.ultimoItem : null;
 
   return (
     <div className="space-y-3">
-      {ultimaMensagem && (
-        <div
-          className={
-            ultimaMensagem.bateu
-              ? "border border-verde-500/40 bg-verde-500/10 rounded-sm px-4 py-3 text-sm text-verde-500 font-medium"
-              : "border border-vermelho-500/40 bg-vermelho-500/10 rounded-sm px-4 py-3 text-sm text-vermelho-500 font-medium"
-          }
-        >
-          {ultimaMensagem.bateu ? "✓ " : "✕ Divergência — vai pra recontagem — "}
-          {ultimaMensagem.ultimoItem}
+      {ultimoItemContado && (
+        <div className="border border-ardosia-200 bg-ardosia-50 rounded-sm px-4 py-3 text-sm text-ardosia-700 font-medium">
+          ✓ Registrado — {ultimoItemContado}
         </div>
       )}
 
@@ -103,6 +98,13 @@ export function ContagemForm({
               <label className="block text-xs text-ardosia-600 mb-1">Código do produto (opcional)</label>
               <input
                 name="codigoProduto"
+                className="w-full border border-ardosia-200 rounded-sm px-4 py-3 text-base outline-none focus:border-ambar-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-ardosia-600 mb-1">Posição/rua (opcional)</label>
+              <input
+                name="posicao"
                 className="w-full border border-ardosia-200 rounded-sm px-4 py-3 text-base outline-none focus:border-ambar-500"
               />
             </div>
@@ -166,14 +168,21 @@ export function ContagemForm({
                 key={item.id}
                 type="button"
                 onClick={() => setSelecionado(item)}
-                className="w-full text-left border border-ardosia-200 rounded-sm px-4 py-3 bg-white hover:border-ambar-500 transition-colors"
+                className="w-full text-left border border-ardosia-200 rounded-sm px-4 py-3 bg-white hover:border-ambar-500 transition-colors flex items-center justify-between gap-3"
               >
-                <p className="text-sm font-medium text-ardosia-950">{item.descricao}</p>
-                <p className="text-xs text-ardosia-500">
-                  Lote {item.lote}
-                  {item.codigoProduto ? ` · Cód. ${item.codigoProduto}` : ""}
-                  {item.armazem ? ` · ${item.armazem}` : ""}
-                </p>
+                <div>
+                  <p className="text-sm font-medium text-ardosia-950">{item.descricao}</p>
+                  <p className="text-xs text-ardosia-500">
+                    Lote {item.lote}
+                    {item.codigoProduto ? ` · Cód. ${item.codigoProduto}` : ""}
+                    {item.armazem ? ` · ${item.armazem}` : ""}
+                  </p>
+                </div>
+                {item.posicao && (
+                  <span className="shrink-0 text-xs font-bold text-ardosia-950 bg-ambar-500/20 border border-ambar-500/40 px-2 py-1 rounded-sm">
+                    {item.posicao}
+                  </span>
+                )}
               </button>
             ))}
             {filtrados.length === 0 && (
@@ -193,7 +202,14 @@ export function ContagemForm({
       ) : (
         <div className="space-y-3">
           <div className="border border-ambar-500/50 bg-ambar-500/5 rounded-sm px-4 py-3">
-            <p className="text-sm font-medium text-ardosia-950">{selecionado.descricao}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-ardosia-950">{selecionado.descricao}</p>
+              {selecionado.posicao && (
+                <span className="shrink-0 text-xs font-bold text-ardosia-950 bg-ambar-500/20 border border-ambar-500/40 px-2 py-1 rounded-sm">
+                  {selecionado.posicao}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-ardosia-500">
               Lote {selecionado.lote}
               {selecionado.codigoProduto ? ` · Cód. ${selecionado.codigoProduto}` : ""}
@@ -230,6 +246,7 @@ export function ContagemForm({
               <label className="block text-xs text-ardosia-600 mb-1">Localização (endereço no armazém)</label>
               <input
                 name="localizacao"
+                defaultValue={selecionado.posicao || ""}
                 required
                 className="w-full border border-ardosia-200 rounded-sm px-4 py-3 text-base outline-none focus:border-ambar-500"
               />
