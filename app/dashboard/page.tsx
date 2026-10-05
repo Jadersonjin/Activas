@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   const [avariasHoje, presencasHoje, radarAbertos] = await Promise.all([
     db.avaria.count({ where: { data: { gte: inicioHoje } } }),
     db.presencaCarga.count({ where: { dataChegada: { gte: inicioHoje } } }),
-    db.avaria.count({ where: { origem: "RADAR" } }),
+    db.avaria.count({ where: { origem: "RADAR", sanada: false } }),
   ]);
 
   const cards = [

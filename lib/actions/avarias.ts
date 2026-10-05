@@ -85,3 +85,32 @@ export async function atualizarAvaria(id: string, formData: FormData) {
   revalidatePath("/avarias");
   redirect("/avarias");
 }
+
+export async function marcarAvariaSanada(id: string, formData: FormData) {
+  const sanadaObservacao = String(formData.get("sanadaObservacao") || "").trim() || null;
+
+  const avaria = await db.avaria.update({
+    where: { id },
+    data: { sanada: true, sanadaObservacao, sanadaEm: new Date() },
+  });
+
+  await registrarLog(
+    "Avaria",
+    id,
+    "EDITAR",
+    `Avaria "${avaria.codigoProduto}" marcada como sanada${sanadaObservacao ? ` — ${sanadaObservacao}` : ""}`
+  );
+  revalidatePath("/avarias");
+  revalidatePath("/avarias/radar");
+}
+
+export async function reabrirAvaria(id: string) {
+  const avaria = await db.avaria.update({
+    where: { id },
+    data: { sanada: false, sanadaObservacao: null, sanadaEm: null },
+  });
+
+  await registrarLog("Avaria", id, "EDITAR", `Avaria "${avaria.codigoProduto}" reaberta (não está mais sanada)`);
+  revalidatePath("/avarias");
+  revalidatePath("/avarias/radar");
+}

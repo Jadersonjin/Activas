@@ -152,6 +152,9 @@ export default async function AvariasPage({
                       >
                         {labelOrigem(a.origem)}
                       </span>
+                      {a.origem === "RADAR" && a.sanada && (
+                        <span className="ml-1 text-[11px] text-verde-500">✓ sanada</span>
+                      )}
                     </td>
                     <td className="px-4 py-2 text-xs">
                       {a.varredura

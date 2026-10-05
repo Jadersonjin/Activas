@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     where: {
       clienteId,
       origem: "RADAR",
+      sanada: false,
       codigoProduto: { contains: codigo.trim(), mode: "insensitive" },
     },
     orderBy: { data: "desc" },

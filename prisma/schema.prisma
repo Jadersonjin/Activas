@@ -139,6 +139,10 @@ model Avaria {
   fotoUrl        String?
   observacao     String?
 
+  sanada             Boolean   @default(false) // deixa de aparecer no Radar quando marcada
+  sanadaObservacao   String?
+  sanadaEm           DateTime?
+
   data           DateTime @default(now())
   criadoEm       DateTime @default(now())
 }

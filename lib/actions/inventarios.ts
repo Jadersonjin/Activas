@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { registrarLog } from "@/lib/log";
+import { itensNaoResolvidos } from "@/lib/inventario-helpers";
 
 function normalizar(v: unknown) {
   return String(v ?? "").trim();
@@ -215,19 +216,8 @@ export async function fecharRodada(rodadaId: string) {
   });
   if (rodada.status !== "ABERTA") return;
 
-  // Item está resolvido se já existe, em QUALQUER rodada, uma contagem batendo com o esperado original
-  const todasContagens = await db.inventarioContagem.findMany({
-    where: { itemEsperado: { inventarioId: rodada.inventarioId } },
-    include: { itemEsperado: true },
-  });
-
-  const resolvidos = new Set(
-    todasContagens
-      .filter((c) => Number(c.quantidadeContada) === Number(c.itemEsperado.quantidadeEsperada))
-      .map((c) => c.itemEsperadoId)
-  );
-
-  const pendentes = rodada.inventario.itens.filter((item) => !resolvidos.has(item.id));
+  // O saldo é avaliado por lote (soma de todas as posições), não posição a posição
+  const pendentes = await itensNaoResolvidos(rodada.inventarioId);
 
   if (pendentes.length === 0) {
     await db.$transaction([
