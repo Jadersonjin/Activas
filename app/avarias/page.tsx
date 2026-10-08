@@ -5,7 +5,7 @@ import { Pagination } from "@/components/Pagination";
 import { db } from "@/lib/db";
 import { registrarAvaria } from "@/lib/actions/avarias";
 import { AvariaProdutoFields } from "@/components/AvariaProdutoFields";
-import { rangeDia } from "@/lib/date-range";
+import { whereAvarias } from "@/lib/avarias-relatorio";
 import { fmtData } from "@/lib/br-date";
 import { paginar, totalPaginas as calcTotalPaginas } from "@/lib/pagination";
 
@@ -21,22 +21,7 @@ export default async function AvariasPage({
   const { q, de, ate, origem, pagina } = await searchParams;
   const session = (await getSession())!;
   const { skip, take, paginaAtual } = paginar(pagina);
-  const where = {
-    data: rangeDia(de, ate),
-    ...(origem ? { origem } : {}),
-    ...(q
-      ? {
-          OR: [
-            { codigoProduto: { contains: q, mode: "insensitive" as const } },
-            { descricao: { contains: q, mode: "insensitive" as const } },
-            { lote: { contains: q, mode: "insensitive" as const } },
-            { numeroNota: { contains: q, mode: "insensitive" as const } },
-            { localizacao: { contains: q, mode: "insensitive" as const } },
-            { cliente: { nome: { contains: q, mode: "insensitive" as const } } },
-          ],
-        }
-      : {}),
-  };
+  const where = whereAvarias({ q, de, ate, origem });
   const [avarias, total, clientes] = await Promise.all([
     db.avaria.findMany({ where, orderBy: { data: "desc" }, skip, take, include: { cliente: true } }),
     db.avaria.count({ where }),
@@ -45,6 +30,16 @@ export default async function AvariasPage({
 
   const temFiltro = Boolean(q || de || ate || origem);
 
+  // Os relatórios usam o mesmo filtro da tela (e pegam tudo que bate nele, não só a página atual)
+  const exportParams = new URLSearchParams();
+  if (q) exportParams.set("q", q);
+  if (de) exportParams.set("de", de);
+  if (ate) exportParams.set("ate", ate);
+  if (origem) exportParams.set("origem", origem);
+  const qs = exportParams.toString() ? `?${exportParams.toString()}` : "";
+  const excelHref = `/api/avarias/export${qs}`;
+  const pdfHref = `/api/avarias/export-pdf${qs}`;
+
   return (
     <AppShell session={session}>
       <header className="mb-8 flex items-start justify-between flex-wrap gap-3">
@@ -52,12 +47,26 @@ export default async function AvariasPage({
           <p className="font-mono text-xs text-ardosia-600">04 · AVARIAS</p>
           <h1 className="font-display text-2xl font-medium mt-1">Controle de avarias</h1>
         </div>
-        <Link
-          href="/avarias/radar"
-          className="text-sm border border-ambar-500/50 text-ambar-600 rounded-sm px-4 py-2 hover:bg-ambar-500/10 transition-colors bg-white"
-        >
-          🎯 Painel do Radar
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={excelHref}
+            className="text-sm border border-ardosia-300 rounded-sm px-4 py-2 hover:border-ambar-500 hover:text-ambar-600 transition-colors bg-white whitespace-nowrap"
+          >
+            ⬇ Relatório Excel
+          </a>
+          <a
+            href={pdfHref}
+            className="text-sm border border-ardosia-300 rounded-sm px-4 py-2 hover:border-ambar-500 hover:text-ambar-600 transition-colors bg-white whitespace-nowrap"
+          >
+            ⬇ Relatório PDF
+          </a>
+          <Link
+            href="/avarias/radar"
+            className="text-sm border border-ambar-500/50 text-ambar-600 rounded-sm px-4 py-2 hover:bg-ambar-500/10 transition-colors bg-white"
+          >
+            🎯 Painel do Radar
+          </Link>
+        </div>
       </header>
 
       <section className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
